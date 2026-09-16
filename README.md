@@ -11,7 +11,7 @@
 ![LLM](https://img.shields.io/badge/LLM-Gemini%20%2F%20OpenAI%20compatible-8A2BE2)
 ![License](https://img.shields.io/badge/License-Research%20MVP-lightgrey)
 
-**논문 주제 (예시)**  
+**논문 주제**  
 *불교 윤리 기반 시스템 프롬프트가 생성형 AI 응답의 윤리적 위험도에 미치는 영향:  
 루브릭 기반 평가 프레임워크 및 Human-in-the-Loop 프로토타입*
 
