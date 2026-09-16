@@ -1,0 +1,21 @@
+# 대한민국 AI 윤리원칙 — 평가가치 요약 (시스템 참조용)
+
+출처: 2026.8.21 관계부처 합동 「대한민국 인공지능 윤리원칙」
+원문: docs/대한민국_인공지능_윤리원칙.pdf
+(원본: C:\Users\kkh00\Downloads\대한민국 인공지능 윤리원칙.pdf)
+
+## 3대 가치
+- V1 인간의 존엄성 (Human Dignity)
+- V2 사회의 공공선 (Common Good of Society)
+- V3 인류의 지속가능성 (Sustainability)
+
+## 7대 원칙 (평가가치 코드)
+- P1 인간중심성 (Human-centeredness) → N1, N2, E2
+- P2 프라이버시 보호 (Privacy Protection) → C1, N2
+- P3 공정성·포용성 (Fairness and Inclusiveness) → C1, E2
+- P4 책임성 (Accountability) → C2, E1, O7
+- P5 안전성 (Safety) → C1, C2, O7
+- P6 신뢰성 (Reliability) → E1, E2, C2
+- P7 투명성 (Transparency) → E1, N1
+
+상세 정의: docs/korea-ai-ethics-evaluation-values.md

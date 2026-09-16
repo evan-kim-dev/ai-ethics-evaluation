@@ -1,0 +1,111 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.models.human_evaluation import HumanEvaluation
+from app.models.llm_evaluation import LLMEvaluation
+from app.models.question import Question
+from app.models.response import AIResponse
+from app.models.risk_result import RiskResult
+from app.schemas.response import (
+    ResponseCreate,
+    ResponseGenerateRequest,
+    ResponseListResponse,
+    ResponseRead,
+)
+from app.services.llm_client import LLMClientError
+from app.services.response_generator import ResponseGenerator
+from app.utils.constants import CONDITIONS
+
+router = APIRouter(tags=["responses"])
+
+
+@router.post("/responses/generate", response_model=ResponseRead, status_code=status.HTTP_201_CREATED)
+def generate_response(
+    payload: ResponseGenerateRequest,
+    db: Session = Depends(get_db),
+) -> AIResponse:
+    question = db.get(Question, payload.question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="질문을 찾을 수 없습니다.")
+    if payload.condition not in CONDITIONS:
+        raise HTTPException(status_code=400, detail="유효하지 않은 condition입니다.")
+
+    try:
+        result = ResponseGenerator().generate(
+            db,
+            question=question,
+            condition=payload.condition,
+            experiment_id=payload.experiment_id,
+        )
+    except LLMClientError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return result.response
+
+
+@router.post("/responses", response_model=ResponseRead, status_code=status.HTTP_201_CREATED)
+def create_response(payload: ResponseCreate, db: Session = Depends(get_db)) -> AIResponse:
+    question = db.get(Question, payload.question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="질문을 찾을 수 없습니다.")
+    if payload.condition not in CONDITIONS:
+        raise HTTPException(status_code=400, detail="유효하지 않은 condition입니다.")
+
+    response = AIResponse(
+        question_id=payload.question_id,
+        experiment_id=payload.experiment_id,
+        condition=payload.condition,
+        model_name=payload.model_name.strip() or "manual",
+        system_prompt_version=payload.system_prompt_version.strip() or "manual-v1",
+        response_text=payload.response_text.strip(),
+        generation_params_json=payload.generation_params_json or "{}",
+    )
+    db.add(response)
+    db.commit()
+    db.refresh(response)
+    return response
+
+
+@router.get("/responses/{response_id}", response_model=ResponseRead)
+def get_response(response_id: int, db: Session = Depends(get_db)) -> AIResponse:
+    response = db.get(AIResponse, response_id)
+    if response is None:
+        raise HTTPException(status_code=404, detail="응답을 찾을 수 없습니다.")
+    return response
+
+
+@router.get("/questions/{question_id}/responses", response_model=ResponseListResponse)
+def list_question_responses(
+    question_id: int,
+    db: Session = Depends(get_db),
+) -> ResponseListResponse:
+    question = db.get(Question, question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="질문을 찾을 수 없습니다.")
+
+    items = (
+        db.query(AIResponse)
+        .filter(AIResponse.question_id == question_id)
+        .order_by(AIResponse.id.desc())
+        .all()
+    )
+    return ResponseListResponse(items=items, total=len(items))
+
+
+@router.delete("/responses/{response_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_response(response_id: int, db: Session = Depends(get_db)) -> None:
+    response = db.get(AIResponse, response_id)
+    if response is None:
+        raise HTTPException(status_code=404, detail="응답을 찾을 수 없습니다.")
+
+    db.query(RiskResult).filter(RiskResult.response_id == response_id).delete()
+    db.query(HumanEvaluation).filter(HumanEvaluation.response_id == response_id).delete()
+    db.query(LLMEvaluation).filter(LLMEvaluation.response_id == response_id).delete()
+    from app.models.baseline_rating import BaselineRating
+
+    db.query(BaselineRating).filter(BaselineRating.response_id == response_id).delete()
+    db.delete(response)
+    db.commit()
