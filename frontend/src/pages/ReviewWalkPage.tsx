@@ -6,6 +6,7 @@ import { fetchLatestComparisons } from '@/api/experiments'
 import { fetchQuestions } from '@/api/questions'
 import { ErrorAlert } from '@/components/common/ErrorAlert'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { ReviewBaselineStars } from '@/components/evaluations/ReviewBaselineStars'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { ExperimentComparison, ConditionComparisonSide } from '@/types/experiment'
@@ -156,12 +157,17 @@ export function ReviewWalkPage() {
       </div>
 
       <Card className="shrink-0 py-4">
-        <p className="text-xs font-semibold tracking-wide text-muted-foreground">
-          {index + 1} / {slides.length} · {domain}
-        </p>
-        <p className="mt-2 max-h-28 overflow-auto text-[15px] leading-relaxed whitespace-pre-wrap">
-          {slide.question.text}
-        </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground">
+              {index + 1} / {slides.length} · {domain}
+            </p>
+            <p className="mt-2 max-h-28 overflow-auto text-[15px] leading-relaxed whitespace-pre-wrap">
+              {slide.question.text}
+            </p>
+          </div>
+          <ReviewBaselineStars responseId={slide.comparison?.baseline?.response.id ?? null} />
+        </div>
       </Card>
 
       <div
