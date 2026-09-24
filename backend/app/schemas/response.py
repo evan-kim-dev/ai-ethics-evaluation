@@ -22,6 +22,12 @@ class ResponseCreate(BaseModel):
     generation_params_json: str = "{}"
 
 
+class ResponseUpdate(BaseModel):
+    response_text: str = Field(..., min_length=1)
+    model_name: str | None = None
+    clear_evaluations: bool = True
+
+
 class ResponseRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

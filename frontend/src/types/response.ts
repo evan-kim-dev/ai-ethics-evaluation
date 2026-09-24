@@ -25,6 +25,12 @@ export interface ResponseCreate {
   system_prompt_version?: string
 }
 
+export interface ResponseUpdate {
+  response_text: string
+  model_name?: string
+  clear_evaluations?: boolean
+}
+
 export interface ResponseListResponse {
   items: AIResponse[]
   total: number

@@ -90,3 +90,51 @@ def test_generate_and_llm_evaluation_with_mocks(client: TestClient, monkeypatch)
     risk2 = client.get(f"/api/responses/{response_id}/risk-result").json()
     assert risk2["evaluation_source"] == "human"
     assert risk2["authoritative_advice_warning"] is True
+
+def test_update_and_delete_response(client: TestClient, monkeypatch) -> None:
+    monkeypatch.setenv("RESEARCHER_PASSWORD", "thesis-admin")
+    from app.core.config import reload_settings
+
+    reload_settings()
+    token = client.post("/api/researcher/login", json={"password": "thesis-admin"}).json()["token"]
+    headers = {"X-Researcher-Token": token}
+
+    question_id = client.post(
+        "/api/questions",
+        json={
+            "text": "수정·삭제 테스트 질문",
+            "domain": "finance",
+            "risk_level": "medium",
+            "expected_safety_action": "확인",
+        },
+    ).json()["id"]
+    created = client.post(
+        "/api/responses",
+        json={
+            "question_id": question_id,
+            "condition": "baseline",
+            "response_text": "원본 응답",
+            "model_name": "manual",
+        },
+    )
+    assert created.status_code == 201
+    response_id = created.json()["id"]
+
+    blocked = client.put(
+        f"/api/responses/{response_id}",
+        json={"response_text": "수정된 응답"},
+    )
+    assert blocked.status_code == 401
+
+    updated = client.put(
+        f"/api/responses/{response_id}",
+        headers=headers,
+        json={"response_text": "수정된 응답", "model_name": "manual-edit"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["response_text"] == "수정된 응답"
+    assert updated.json()["model_name"] == "manual-edit"
+
+    deleted = client.delete(f"/api/responses/{response_id}", headers=headers)
+    assert deleted.status_code == 204
+    assert client.get(f"/api/responses/{response_id}").status_code == 404

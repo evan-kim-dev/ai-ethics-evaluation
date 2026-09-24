@@ -4,6 +4,7 @@ import type {
   Condition,
   ResponseCreate,
   ResponseListResponse,
+  ResponseUpdate,
 } from '@/types/response'
 
 export async function createResponse(payload: ResponseCreate): Promise<AIResponse> {
@@ -33,4 +34,16 @@ export async function fetchQuestionResponses(
     `/api/questions/${questionId}/responses`,
   )
   return data
+}
+
+export async function updateResponse(
+  responseId: number,
+  payload: ResponseUpdate,
+): Promise<AIResponse> {
+  const { data } = await apiClient.put<AIResponse>(`/api/responses/${responseId}`, payload)
+  return data
+}
+
+export async function deleteResponse(responseId: number): Promise<void> {
+  await apiClient.delete(`/api/responses/${responseId}`)
 }
