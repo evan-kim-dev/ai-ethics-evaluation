@@ -18,7 +18,7 @@ from app.core.request_context import (
     llm_base_url_override,
     llm_model_override,
 )
-from app.routers import dashboard, evaluations, experiments, questions, rater_accounts, responses
+from app.routers import dashboard, evaluations, experiments, questions, rater_accounts, researcher, responses
 from app.services.seed_data import seed_questions_from_csv
 
 SAMPLE_CSV_PATH = Path(__file__).resolve().parents[2] / "data" / "sample_questions.csv"
@@ -89,6 +89,7 @@ app.include_router(questions.router, prefix="/api")
 app.include_router(responses.router, prefix="/api")
 app.include_router(evaluations.router, prefix="/api")
 app.include_router(rater_accounts.router, prefix="/api")
+app.include_router(researcher.router, prefix="/api")
 app.include_router(experiments.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 

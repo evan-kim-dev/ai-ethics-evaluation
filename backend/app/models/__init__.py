@@ -3,6 +3,7 @@ from app.models.experiment import Experiment
 from app.models.human_evaluation import HumanEvaluation
 from app.models.llm_evaluation import LLMEvaluation
 from app.models.rater_account import RaterAccount, RaterSession
+from app.models.researcher_session import ResearcherSession
 from app.models.question import Question
 from app.models.rating_share_link import RatingShareLink
 from app.models.response import AIResponse
@@ -19,4 +20,5 @@ __all__ = [
     "RatingShareLink",
     "RaterAccount",
     "RaterSession",
+    "ResearcherSession",
 ]

@@ -21,6 +21,12 @@ apiClient.interceptors.request.use((config) => {
   const llmKey = getLlmApiKey()
   const llmModel = getLlmModel()
   const llmBaseUrl = getLlmBaseUrl()
+  let researcherToken = ''
+  try {
+    researcherToken = localStorage.getItem('researcher_token')?.trim() ?? ''
+  } catch {
+    researcherToken = ''
+  }
 
   if (llmKey) config.headers.set('X-LLM-API-Key', llmKey)
   else if (config.headers.has('X-LLM-API-Key')) config.headers.delete('X-LLM-API-Key')
@@ -30,6 +36,9 @@ apiClient.interceptors.request.use((config) => {
 
   if (llmBaseUrl) config.headers.set('X-LLM-Base-URL', llmBaseUrl)
   else if (config.headers.has('X-LLM-Base-URL')) config.headers.delete('X-LLM-Base-URL')
+
+  if (researcherToken) config.headers.set('X-Researcher-Token', researcherToken)
+  else if (config.headers.has('X-Researcher-Token')) config.headers.delete('X-Researcher-Token')
 
   return config
 })

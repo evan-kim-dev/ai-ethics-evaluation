@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     llm_model: str = "gemini-3.1-pro-preview"
     llm_temperature: float = 1.0
 
+    researcher_password: str = ""
     seed_on_startup: bool = True
 
     @property

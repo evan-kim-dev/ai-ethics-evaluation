@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 
 import { ApiSettingsPanel } from '@/components/layout/ApiSettingsPanel'
+import { clearResearcherToken, getResearcherToken } from '@/api/researcher'
 import { getLlmApiKey, getLlmModel } from '@/lib/runtimeConfig'
 import { cn } from '@/lib/utils'
 
@@ -198,6 +199,18 @@ export function TopNav() {
                       </div>
                     </div>
                   ))}
+                  {getResearcherToken() ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearResearcherToken()
+                        window.location.assign('/')
+                      }}
+                      className="mt-1 w-full rounded-2xl px-3 py-3 text-left text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                    >
+                      연구자 로그아웃
+                    </button>
+                  ) : null}
                 </div>
               </nav>
             </>
