@@ -20,15 +20,23 @@ export function StarRatingInput({
   disabled?: boolean
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-0.5" role="radiogroup" aria-label="별점">
+    <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="flex items-center gap-1" role="radiogroup" aria-label="별점">
         {[0, 1, 2, 3, 4].map((starIndex) => {
           const ratio = fillRatio(starIndex, value ?? 0)
           return (
-            <div key={starIndex} className="relative h-8 w-8">
-              <Star size={26} strokeWidth={1.75} className="absolute inset-0 m-auto text-border" />
+            <div key={starIndex} className="relative h-11 w-11 touch-manipulation sm:h-9 sm:w-9">
+              <Star
+                size={28}
+                strokeWidth={1.75}
+                className="absolute inset-0 m-auto text-border sm:size-[26px]"
+              />
               <div className="absolute inset-0 overflow-hidden" style={{ width: `${ratio * 100}%` }}>
-                <Star size={26} strokeWidth={1.75} className="m-auto fill-amber-400 text-amber-400" />
+                <Star
+                  size={28}
+                  strokeWidth={1.75}
+                  className="m-auto fill-amber-400 text-amber-400 sm:size-[26px]"
+                />
               </div>
               <button
                 type="button"
@@ -65,7 +73,8 @@ export function StarRatingInput({
           aria-label="별점 조절"
           onChange={(event) => onChange(Number(event.target.value))}
           className={cn(
-            'h-1.5 w-full max-w-[10rem] cursor-pointer accent-[#3182f6] disabled:cursor-not-allowed disabled:opacity-50',
+            'h-8 w-full max-w-none flex-1 cursor-pointer touch-manipulation accent-[#3182f6]',
+            'disabled:cursor-not-allowed disabled:opacity-50 sm:h-1.5 sm:max-w-[10rem] sm:flex-none',
           )}
         />
       ) : (

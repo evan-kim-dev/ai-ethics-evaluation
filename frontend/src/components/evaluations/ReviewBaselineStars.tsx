@@ -146,9 +146,9 @@ export function ReviewBaselineStars({
   }
 
   return (
-    <div className="w-full shrink-0 space-y-2 lg:w-72">
+    <div className="w-full shrink-0 space-y-2 rounded-2xl border border-[#3182f6]/25 bg-[#3182f6]/5 p-3 lg:w-72 lg:border-0 lg:bg-transparent lg:p-0">
       <div>
-        <p className="text-sm font-semibold">Baseline 별점</p>
+        <p className="text-sm font-semibold text-[#3182f6] lg:text-foreground">Baseline 별점</p>
         <p className="text-[11px] text-muted-foreground">
           {requireSelection
             ? '별 선택 후 다음으로 넘기면 저장됩니다.'
@@ -173,7 +173,7 @@ export function ReviewBaselineStars({
       {!requireSelection ? (
         <Button
           type="button"
-          className="px-3 py-2 text-xs"
+          className="min-h-11 w-full px-3 py-2 text-xs sm:w-auto"
           onClick={() => void persist()}
           disabled={loading || submitting}
         >

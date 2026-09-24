@@ -1,6 +1,6 @@
 {
   "og": {
-    "title": "AI 윤리 평가 참여",
+    "title": "AI 윤리 평가 ",
     "description": "파란색 Baseline 답변에만 1~5점 별점을 남겨 주세요.",
     "siteName": "AI 윤리 응답 비교",
     "url": "https://ai-ethics-evaluation.vercel.app/review/share",
@@ -19,7 +19,6 @@
     "idLabel": "평가자 ID",
     "passwordLabel": "비밀번호",
     "notes": [
-      "본인 계정만 사용",
       "같은 계정으로 다시 들어오면 수정 가능"
     ]
   }
