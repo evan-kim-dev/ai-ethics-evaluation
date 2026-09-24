@@ -8,6 +8,7 @@ import { LiveChatEvalPage } from '@/pages/LiveChatEvalPage'
 import { PublicRatePageView } from '@/pages/PublicRatePage'
 import { QuestionsPage } from '@/pages/QuestionsPage'
 import { ResultsPage } from '@/pages/ResultsPage'
+import { ReviewWalkPage } from '@/pages/ReviewWalkPage'
 
 function ExperimentRedirect() {
   const [params] = useSearchParams()
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="ethics-workspace" element={<EthicsWorkspacePage />} />
         <Route path="experiment" element={<ExperimentRedirect />} />
         <Route path="results" element={<ResultsPage />} />
+        <Route path="review" element={<ReviewWalkPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

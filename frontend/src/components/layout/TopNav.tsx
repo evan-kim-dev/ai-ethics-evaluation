@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import {
   ClipboardCheck,
+  Columns3,
   FileQuestion,
   KeyRound,
   LayoutDashboard,
@@ -42,6 +43,7 @@ const navSections: NavSection[] = [
       { to: '/live-chat', label: '실시간 평가', icon: MessageSquareText },
       { to: '/evaluation', label: 'Baseline 별점', icon: ClipboardCheck },
       { to: '/ethics-workspace', label: '3조건 윤리 분석', icon: Scale },
+      { to: '/review', label: '질문 넘겨보기', icon: Columns3 },
     ],
   },
   {

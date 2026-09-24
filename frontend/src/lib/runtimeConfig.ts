@@ -72,8 +72,20 @@ export function getDefaultApiBaseUrl(): string {
   return DEFAULT_API_BASE
 }
 
+function isLoopbackUrl(url: string): boolean {
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(url)
+}
+
+function pageIsLocal(): boolean {
+  if (typeof window === 'undefined') return true
+  const host = window.location.hostname
+  return host === 'localhost' || host === '127.0.0.1'
+}
+
 export function getApiBaseUrl(): string {
-  return readStorage(API_BASE_KEY) || DEFAULT_API_BASE
+  const stored = readStorage(API_BASE_KEY)
+  if (stored && (pageIsLocal() || !isLoopbackUrl(stored))) return stored
+  return DEFAULT_API_BASE
 }
 
 export function setApiBaseUrl(url: string): void {

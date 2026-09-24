@@ -8,6 +8,7 @@ import type {
 export async function fetchQuestions(params?: {
   domain?: string
   risk_level?: string
+  limit?: number
 }): Promise<QuestionListResponse> {
   const { data } = await apiClient.get<QuestionListResponse>('/api/questions', {
     params,
