@@ -141,7 +141,7 @@ export function ReviewWalkPage() {
   const domain = DOMAIN_LABELS[slide.question.domain] ?? slide.question.domain
 
   return (
-    <div className="flex h-[calc(100dvh-7.5rem)] min-h-[32rem] flex-col gap-4">
+    <div className="flex min-h-[32rem] flex-col gap-4 md:h-[calc(100dvh-7.5rem)]">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">질문 넘겨보기</h1>
@@ -166,7 +166,7 @@ export function ReviewWalkPage() {
 
       <div
         key={slide.question.id}
-        className="grid min-h-0 flex-1 gap-3 lg:grid-cols-3"
+        className="grid min-h-0 flex-1 gap-3 md:grid-cols-3"
       >
         {SIDE_KEYS.map((condition) => {
           const meta = CONDITION_META[condition]
@@ -186,7 +186,7 @@ export function ReviewWalkPage() {
                   </span>
                 </p>
               </div>
-              <div className="min-h-0 flex-1 overflow-auto rounded-2xl bg-muted px-3 py-3 text-sm leading-relaxed whitespace-pre-wrap">
+              <div className="min-h-40 flex-1 overflow-auto rounded-2xl bg-muted px-3 py-3 text-sm leading-relaxed whitespace-pre-wrap md:min-h-0">
                 {side?.response.response_text ?? '이 조건의 응답이 없습니다.'}
               </div>
             </Card>
