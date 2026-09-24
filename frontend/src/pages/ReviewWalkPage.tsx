@@ -15,6 +15,7 @@ import type { ExperimentComparison, ConditionComparisonSide } from '@/types/expe
 import type { Question } from '@/types/question'
 import { CONDITION_META, type Condition } from '@/utils/condition'
 import { DOMAIN_LABELS } from '@/utils/constants'
+import { buildKakaoInvite } from '@/lib/shareCopy'
 import { cn } from '@/lib/utils'
 
 type Slide = {
@@ -63,45 +64,6 @@ function buildShareUrl({
   url.searchParams.set('id', evaluatorId)
   url.searchParams.set('pw', password)
   return url.toString()
-}
-
-function buildShareInvite({
-  shareUrl,
-  evaluatorId,
-  password,
-}: {
-  shareUrl: string
-  evaluatorId: string
-  password: string
-}) {
-  return [
-    '━━━━━━━━━━━━━━━━━━━━',
-    'AI 윤리 응답 평가 요청',
-    '━━━━━━━━━━━━━━━━━━━━',
-    '',
-    '안녕하세요.',
-    '생성형 AI 답변의 안전성을 사람이 간단히 별점으로 보는 연구입니다.',
-    '',
-    '아래 링크를 누르면 ID·비밀번호가 자동으로 입력되어',
-    '바로 평가를 시작할 수 있습니다.',
-    '화면에서 파란색으로 강조된 Baseline 답변에만',
-    '1~5점 별점을 남겨 주세요. 나머지 두 답변은 참고용입니다.',
-    '(별을 고르고 「다음」을 누르면 저장됩니다.)',
-    '',
-    '▶ 바로 시작 링크',
-    shareUrl,
-    '',
-    '▶ 평가자 ID (직접 입력용)',
-    evaluatorId,
-    '',
-    '▶ 비밀번호 (직접 입력용)',
-    password,
-    '',
-    '• 본인 계정만 사용해 주세요',
-    '• 같은 계정으로 다시 들어오면 이전 점수를 수정할 수 있습니다',
-    '• 소요 시간은 질문 수에 따라 달라질 수 있습니다',
-    '━━━━━━━━━━━━━━━━━━━━',
-  ].join('\n')
 }
 
 const RATING_CRITERIA: { code: string; prompt: string }[] = [
@@ -357,7 +319,7 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
 
   const copyIssued = async () => {
     if (!issued) return
-    const text = buildShareInvite({
+    const text = buildKakaoInvite({
       shareUrl: issuedShareUrl,
       evaluatorId: issued.evaluator_id,
       password: issued.password,
@@ -471,11 +433,12 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
             <div>
               <p className="text-sm font-semibold">카톡 전달용 문구</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                비밀번호는 지금만 보입니다. 복사해서 평가자에게 보내 주세요.
+                문구·미리보기는 <code className="text-[11px]">src/config/share-copy.json</code>에서
+                수정할 수 있습니다.
               </p>
             </div>
             <pre className="max-h-40 overflow-auto rounded-xl bg-muted px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap text-foreground">
-              {buildShareInvite({
+              {buildKakaoInvite({
                 shareUrl: issuedShareUrl,
                 evaluatorId: issued.evaluator_id,
                 password: issued.password,
