@@ -49,6 +49,21 @@ function safetyOf(side: ConditionComparisonSide | null): number | null {
   return score == null ? null : score
 }
 
+function buildShareUrl({
+  origin,
+  evaluatorId,
+  password,
+}: {
+  origin: string
+  evaluatorId: string
+  password: string
+}) {
+  const url = new URL('/review/share', origin)
+  url.searchParams.set('id', evaluatorId)
+  url.searchParams.set('pw', password)
+  return url.toString()
+}
+
 function buildShareInvite({
   shareUrl,
   evaluatorId,
@@ -66,17 +81,18 @@ function buildShareInvite({
     '안녕하세요.',
     '생성형 AI 답변의 안전성을 사람이 간단히 별점으로 보는 연구입니다.',
     '',
-    '아래 링크로 들어가 ID·비밀번호를 입력한 뒤,',
+    '아래 링크를 누르면 ID·비밀번호가 자동으로 입력되어',
+    '바로 평가를 시작할 수 있습니다.',
     '질문마다 Baseline 답변에만 1~5점 별점을 남겨 주세요.',
     '(별을 고르고 「다음」을 누르면 저장됩니다.)',
     '',
-    '▶ 평가 링크',
+    '▶ 바로 시작 링크',
     shareUrl,
     '',
-    '▶ 평가자 ID',
+    '▶ 평가자 ID (직접 입력용)',
     evaluatorId,
     '',
-    '▶ 비밀번호',
+    '▶ 비밀번호 (직접 입력용)',
     password,
     '',
     '• 본인 계정만 사용해 주세요',
@@ -234,6 +250,52 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
     return new URL('/review/share', window.location.origin).toString()
   }, [])
 
+  const issuedShareUrl = useMemo(() => {
+    if (!issued || typeof window === 'undefined') return shareUrl
+    return buildShareUrl({
+      origin: window.location.origin,
+      evaluatorId: issued.evaluator_id,
+      password: issued.password,
+    })
+  }, [issued, shareUrl])
+
+  const clearCredentialParams = useCallback(() => {
+    const n = params.get('n')
+    setParams(n ? { n } : {}, { replace: true })
+  }, [params, setParams])
+
+  const autoLoginTried = useRef(false)
+  useEffect(() => {
+    if (!isRater || raterToken || autoLoginTried.current) return
+    const id = (params.get('id') || params.get('evaluator_id') || '').trim()
+    const pw = (params.get('pw') || params.get('password') || '').trim()
+    if (id) setDraftRaterId(id)
+    if (pw) setDraftPassword(pw)
+    if (!id || !pw) return
+    autoLoginTried.current = true
+    setGateBusy(true)
+    setGateError(null)
+    void loginRaterAccount(id, pw)
+      .then((session) => {
+        try {
+          sessionStorage.setItem(SHARE_ID_KEY, session.evaluator_id)
+          sessionStorage.setItem(SHARE_TOKEN_KEY, session.token)
+        } catch {
+          /* ignore */
+        }
+        setDraftPassword('')
+        setRaterId(session.evaluator_id)
+        setRaterToken(session.token)
+        clearCredentialParams()
+      })
+      .catch((err: unknown) => {
+        setGateError(err instanceof Error ? err.message : '자동 로그인에 실패했습니다. 직접 입력해 주세요.')
+      })
+      .finally(() => {
+        setGateBusy(false)
+      })
+  }, [isRater, raterToken, params, clearCredentialParams])
+
   const claimRater = async (event: FormEvent) => {
     event.preventDefault()
     const cleaned = draftRaterId.trim()
@@ -254,6 +316,7 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
       setDraftPassword('')
       setRaterId(session.evaluator_id)
       setRaterToken(session.token)
+      clearCredentialParams()
     } catch (err) {
       setGateError(err instanceof Error ? err.message : '로그인에 실패했습니다.')
     } finally {
@@ -291,7 +354,7 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
   const copyIssued = async () => {
     if (!issued) return
     const text = buildShareInvite({
-      shareUrl,
+      shareUrl: issuedShareUrl,
       evaluatorId: issued.evaluator_id,
       password: issued.password,
     })
@@ -310,8 +373,9 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
         <Card className="mx-auto max-w-md p-6">
           <h1 className="text-xl font-bold tracking-tight">평가 로그인</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            전달받은 평가자 ID와 비밀번호를 입력해 주세요. 같은 계정으로 다시 들어오면 이전에 남긴
-            별점을 이어서 수정할 수 있습니다.
+            {gateBusy
+              ? '링크로 전달받은 계정으로 자동 로그인하는 중입니다...'
+              : '전달받은 평가자 ID와 비밀번호를 입력해 주세요. 같은 계정으로 다시 들어오면 이전에 남긴 별점을 이어서 수정할 수 있습니다.'}
           </p>
           <form className="mt-4 space-y-3" onSubmit={(event) => void claimRater(event)}>
             <Input
@@ -403,7 +467,7 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
             </div>
             <pre className="max-h-64 overflow-auto rounded-2xl bg-muted px-3 py-3 text-xs leading-relaxed whitespace-pre-wrap text-foreground">
               {buildShareInvite({
-                shareUrl,
+                shareUrl: issuedShareUrl,
                 evaluatorId: issued.evaluator_id,
                 password: issued.password,
               })}
