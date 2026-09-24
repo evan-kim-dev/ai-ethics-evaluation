@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import {
-  createBaselineRating,
-  fetchBaselineRating,
-  updateBaselineRating,
-} from '@/api/evaluations'
+import { createBaselineRating, fetchBaselineRating } from '@/api/evaluations'
 import { StarRatingInput } from '@/components/evaluations/StarRatingInput'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -76,17 +72,11 @@ export function ReviewBaselineStars({
     setError(null)
     setSuccess(null)
     try {
-      const saved = current.existing
-        ? await updateBaselineRating(current.existing.id, {
-            star_rating: current.starRating,
-            evaluator_id: current.evaluatorId,
-            note: current.existing.note,
-          })
-        : await createBaselineRating(current.responseId, {
-            star_rating: current.starRating,
-            evaluator_id: current.evaluatorId,
-            note: '',
-          })
+      const saved = await createBaselineRating(current.responseId, {
+        star_rating: current.starRating,
+        evaluator_id: current.evaluatorId,
+        note: current.existing?.note ?? '',
+      })
       setExisting(saved)
       setStarRating(saved.star_rating)
       try {
