@@ -21,6 +21,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="rate/:token" element={<PublicRatePageView />} />
+      <Route path="review/share" element={<ReviewWalkPage audience="rater" />} />
       <Route element={<AppLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="guide" element={<GuidePage />} />

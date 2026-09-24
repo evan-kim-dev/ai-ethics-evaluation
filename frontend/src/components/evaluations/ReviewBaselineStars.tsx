@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
   createBaselineRating,
@@ -20,24 +20,103 @@ function readEvaluatorId(): string {
   }
 }
 
-export function ReviewBaselineStars({ responseId }: { responseId: number | null }) {
-  const [evaluatorId, setEvaluatorId] = useState(readEvaluatorId)
-  const [appliedEvaluator, setAppliedEvaluator] = useState(readEvaluatorId)
-  const [starRating, setStarRating] = useState(3)
+export function ReviewBaselineStars({
+  responseId,
+  lockedEvaluatorId,
+  requireSelection = false,
+  bindSave,
+}: {
+  responseId: number | null
+  lockedEvaluatorId?: string
+  requireSelection?: boolean
+  bindSave?: (save: () => Promise<boolean>) => void
+}) {
+  const [evaluatorId, setEvaluatorId] = useState(lockedEvaluatorId ?? readEvaluatorId)
+  const [appliedEvaluator, setAppliedEvaluator] = useState(lockedEvaluatorId ?? readEvaluatorId)
+  const [starRating, setStarRating] = useState<number | null>(requireSelection ? null : 3)
   const [existing, setExisting] = useState<BaselineRating | null>(null)
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const stateRef = useRef({
+    responseId,
+    starRating,
+    existing,
+    evaluatorId: lockedEvaluatorId ?? evaluatorId,
+    requireSelection,
+  })
+
+  useEffect(() => {
+    if (lockedEvaluatorId) {
+      setEvaluatorId(lockedEvaluatorId)
+      setAppliedEvaluator(lockedEvaluatorId)
+    }
+  }, [lockedEvaluatorId])
+
+  stateRef.current = {
+    responseId,
+    starRating,
+    existing,
+    evaluatorId: (lockedEvaluatorId ?? evaluatorId).trim() || 'researcher',
+    requireSelection,
+  }
+
+  const persistRef = useRef<() => Promise<boolean>>(async () => true)
+
+  const persist = async () => {
+    const current = stateRef.current
+    if (current.responseId == null) return true
+    if (current.starRating == null) {
+      setError('별점을 선택한 뒤 다음으로 넘어가 주세요.')
+      setSuccess(null)
+      return false
+    }
+    setSubmitting(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const saved = current.existing
+        ? await updateBaselineRating(current.existing.id, {
+            star_rating: current.starRating,
+            evaluator_id: current.evaluatorId,
+            note: current.existing.note,
+          })
+        : await createBaselineRating(current.responseId, {
+            star_rating: current.starRating,
+            evaluator_id: current.evaluatorId,
+            note: '',
+          })
+      setExisting(saved)
+      setStarRating(saved.star_rating)
+      try {
+        localStorage.setItem(EVALUATOR_STORAGE_KEY, current.evaluatorId)
+      } catch {
+        /* ignore */
+      }
+      setSuccess('저장했습니다')
+      return true
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '별점 저장에 실패했습니다.')
+      return false
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  persistRef.current = persist
+  useEffect(() => {
+    bindSave?.(() => persistRef.current())
+  }, [bindSave])
 
   useEffect(() => {
     if (responseId == null) {
       setExisting(null)
-      setStarRating(3)
+      setStarRating(requireSelection ? null : 3)
       return
     }
     let cancelled = false
-    const evaluator = appliedEvaluator.trim() || 'researcher'
+    const evaluator = (lockedEvaluatorId ?? appliedEvaluator).trim() || 'researcher'
     setLoading(true)
     setError(null)
     setSuccess(null)
@@ -45,7 +124,7 @@ export function ReviewBaselineStars({ responseId }: { responseId: number | null 
       .then((rating) => {
         if (cancelled) return
         setExisting(rating)
-        setStarRating(rating?.star_rating ?? 3)
+        setStarRating(rating?.star_rating ?? (requireSelection ? null : 3))
       })
       .catch((err: unknown) => {
         if (cancelled) return
@@ -58,40 +137,7 @@ export function ReviewBaselineStars({ responseId }: { responseId: number | null 
     return () => {
       cancelled = true
     }
-  }, [responseId, appliedEvaluator])
-
-  const save = async () => {
-    if (responseId == null) return
-    const evaluator = evaluatorId.trim() || 'researcher'
-    setSubmitting(true)
-    setError(null)
-    setSuccess(null)
-    try {
-      const saved = existing
-        ? await updateBaselineRating(existing.id, {
-            star_rating: starRating,
-            evaluator_id: evaluator,
-            note: existing.note,
-          })
-        : await createBaselineRating(responseId, {
-            star_rating: starRating,
-            evaluator_id: evaluator,
-            note: '',
-          })
-      setExisting(saved)
-      setStarRating(saved.star_rating)
-      try {
-        localStorage.setItem(EVALUATOR_STORAGE_KEY, evaluator)
-      } catch {
-        /* ignore */
-      }
-      setSuccess('저장했습니다')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '별점 저장에 실패했습니다.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
+  }, [responseId, appliedEvaluator, lockedEvaluatorId, requireSelection])
 
   if (responseId == null) {
     return (
@@ -103,22 +149,32 @@ export function ReviewBaselineStars({ responseId }: { responseId: number | null 
     <div className="w-full shrink-0 space-y-3 md:w-80">
       <div>
         <p className="text-sm font-semibold">Baseline 별점</p>
-        <p className="text-xs text-muted-foreground">S에는 들어가지 않는 보조 평가입니다.</p>
+        <p className="text-xs text-muted-foreground">
+          {requireSelection
+            ? '별을 고르고 다음으로 넘기면 이 평가자 이름으로 저장됩니다.'
+            : 'S에는 들어가지 않는 보조 평가입니다.'}
+        </p>
       </div>
       <StarRatingInput value={starRating} onChange={setStarRating} disabled={loading || submitting} />
-      <Input
-        value={evaluatorId}
-        onChange={(event) => setEvaluatorId(event.target.value)}
-        onBlur={() => setAppliedEvaluator(evaluatorId.trim() || 'researcher')}
-        placeholder="평가자 ID"
-        aria-label="평가자 ID"
-        disabled={submitting}
-      />
+      {lockedEvaluatorId ? (
+        <p className="text-sm text-muted-foreground">평가자 {lockedEvaluatorId}</p>
+      ) : (
+        <Input
+          value={evaluatorId}
+          onChange={(event) => setEvaluatorId(event.target.value)}
+          onBlur={() => setAppliedEvaluator(evaluatorId.trim() || 'researcher')}
+          placeholder="평가자 ID"
+          aria-label="평가자 ID"
+          disabled={submitting}
+        />
+      )}
       {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
       {success ? <p className="text-sm font-medium text-success">{success}</p> : null}
-      <Button type="button" onClick={() => void save()} disabled={loading || submitting}>
-        {submitting ? '저장 중...' : existing ? '별점 수정' : '별점 저장'}
-      </Button>
+      {!requireSelection ? (
+        <Button type="button" onClick={() => void persist()} disabled={loading || submitting}>
+          {submitting ? '저장 중...' : existing ? '별점 수정' : '별점 저장'}
+        </Button>
+      ) : null}
     </div>
   )
 }
