@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 
 import { AppLayout } from '@/components/layout/AppLayout'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { GuidePage } from '@/pages/GuidePage'
 import { EthicsWorkspacePage } from '@/pages/EthicsWorkspacePage'
 import { EvaluationPage } from '@/pages/EvaluationPage'
 import { LiveChatEvalPage } from '@/pages/LiveChatEvalPage'
@@ -22,6 +23,7 @@ export default function App() {
       <Route path="rate/:token" element={<PublicRatePageView />} />
       <Route element={<AppLayout />}>
         <Route index element={<DashboardPage />} />
+        <Route path="guide" element={<GuidePage />} />
         <Route path="questions" element={<QuestionsPage />} />
         <Route path="evaluation" element={<EvaluationPage />} />
         <Route path="live-chat" element={<LiveChatEvalPage />} />

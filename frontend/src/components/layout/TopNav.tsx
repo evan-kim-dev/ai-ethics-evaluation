@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import {
+  BookOpen,
   ClipboardCheck,
   Columns3,
   FileQuestion,
@@ -33,6 +34,7 @@ const navSections: NavSection[] = [
   {
     title: '총괄',
     items: [
+      { to: '/guide', label: '연구 개요', icon: BookOpen },
       { to: '/', label: '연구 대시보드', icon: LayoutDashboard },
       { to: '/results', label: '전체 분석', icon: LineChart },
     ],
