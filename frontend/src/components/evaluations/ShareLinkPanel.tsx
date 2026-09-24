@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import type { BaselineRating, RatingShareLink } from '@/types/evaluation'
 import { downloadOfflineRatingHtml } from '@/utils/offlineRatingExport'
+import { formatDateTime } from '@/utils/format'
 
 function absoluteShareUrl(path: string): string {
   return `${window.location.origin}${path}`
@@ -193,7 +194,7 @@ export function ShareLinkPanel({
                       {item.note || '—'}
                     </td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">
-                      {new Date(item.updated_at).toLocaleString()}
+                      {formatDateTime(item.updated_at)}
                     </td>
                   </tr>
                 ))}

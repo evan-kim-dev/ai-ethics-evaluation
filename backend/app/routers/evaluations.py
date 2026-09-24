@@ -91,14 +91,19 @@ def _upsert_baseline_rating(
 
 
 def _rating_record(rating: BaselineRating) -> dict:
+    def _iso(value: datetime) -> str:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
     return {
         "id": rating.id,
         "response_id": rating.response_id,
         "evaluator_id": rating.evaluator_id,
         "star_rating": rating.star_rating,
         "note": rating.note or "",
-        "created_at": rating.created_at.isoformat(),
-        "updated_at": rating.updated_at.isoformat(),
+        "created_at": _iso(rating.created_at),
+        "updated_at": _iso(rating.updated_at),
     }
 
 
