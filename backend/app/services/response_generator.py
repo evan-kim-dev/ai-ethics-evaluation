@@ -43,7 +43,8 @@ class ResponseGenerator:
             raise ValueError(f"유효하지 않은 condition: {condition}")
 
         settings = get_settings()
-        active_model = self.llm_client.resolve_model()
+        resolve_model = getattr(self.llm_client, "resolve_model", None)
+        active_model = resolve_model() if callable(resolve_model) else settings.llm_model
         try:
             system_prompt = load_prompt(condition)
         except PromptLoadError as exc:
@@ -81,7 +82,11 @@ class ResponseGenerator:
         params = {
             "temperature": settings.llm_temperature,
             "model": active_model,
-            "base_url": self.llm_client.resolve_base_url(),
+            "base_url": (
+                self.llm_client.resolve_base_url()
+                if callable(getattr(self.llm_client, "resolve_base_url", None))
+                else settings.llm_base_url
+            ),
             "condition": condition,
             "rag": True,
             "retrieved_sources": sources_as_dicts(sources),

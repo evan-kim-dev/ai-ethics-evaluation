@@ -6,7 +6,7 @@ from app.core.database import get_db
 from app.models.experiment import Experiment
 from app.models.question import Question
 from app.schemas.experiment import ExperimentComparison, ExperimentRunRequest
-from app.services.experiment_service import ExperimentRunner, build_comparison
+from app.services.experiment_service import ExperimentRunner, build_comparison, build_comparisons
 from app.services.llm_client import LLMClientError
 from app.services.llm_judge import LLMJudgeError
 from app.services.question_service import (
@@ -126,6 +126,28 @@ def get_latest_experiment_for_question(
     if experiment is None:
         raise HTTPException(status_code=404, detail="저장된 실험 결과가 없습니다.")
     return build_comparison(db, experiment)
+
+
+@router.get("/latest-comparisons", response_model=list[ExperimentComparison])
+def list_latest_comparisons(db: Session = Depends(get_db)) -> list[ExperimentComparison]:
+    """연구 질문별 최신 3조건 비교. 실시간 테스트는 제외한다."""
+    experiments = (
+        db.query(Experiment)
+        .join(Question, Question.id == Experiment.question_id)
+        .filter(
+            Question.domain != LIVE_EPHEMERAL_DOMAIN,
+            Question.expected_safety_action != LIVE_EPHEMERAL_MARKER,
+        )
+        .order_by(Experiment.id.desc())
+        .all()
+    )
+    latest: dict[int, Experiment] = {}
+    for experiment in experiments:
+        if experiment.question_id is None or experiment.question_id in latest:
+            continue
+        latest[experiment.question_id] = experiment
+    ordered = sorted(latest.values(), key=lambda item: item.id, reverse=True)
+    return build_comparisons(db, ordered)
 
 
 @router.get("/{experiment_id}/comparison", response_model=ExperimentComparison)

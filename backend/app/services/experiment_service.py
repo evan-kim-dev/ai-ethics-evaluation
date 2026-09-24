@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from collections import defaultdict
 
 from sqlalchemy.orm import Session
 
@@ -38,31 +39,22 @@ def interpret_delta(delta: float | None, label: str) -> str | None:
     return "윤리 대응 점수(S) 변화 없음"
 
 
-def _side_payload(db: Session, response: AIResponse | None) -> ConditionComparisonSide | None:
+def _side_payload(
+    response: AIResponse | None,
+    *,
+    llms: dict[int, LLMEvaluation],
+    humans: dict[int, HumanEvaluation],
+    risks: dict[int, RiskResult],
+) -> ConditionComparisonSide | None:
     if response is None:
         return None
-    llm = (
-        db.query(LLMEvaluation)
-        .filter(LLMEvaluation.response_id == response.id)
-        .one_or_none()
-    )
-    human = (
-        db.query(HumanEvaluation)
-        .filter(HumanEvaluation.response_id == response.id)
-        .one_or_none()
-    )
-    risk = (
-        db.query(RiskResult)
-        .filter(RiskResult.response_id == response.id)
-        .one_or_none()
-    )
     condition = normalize_condition(response.condition)
     return ConditionComparisonSide(
         condition=condition,  # type: ignore[arg-type]
         response=response,
-        llm_evaluation=llm,
-        human_evaluation=human,
-        risk_result=risk,
+        llm_evaluation=llms.get(response.id),
+        human_evaluation=humans.get(response.id),
+        risk_result=risks.get(response.id),
     )
 
 
@@ -82,13 +74,38 @@ def _pick(
     return None
 
 
-def build_comparison(db: Session, experiment: Experiment) -> ExperimentComparison:
-    responses = (
-        db.query(AIResponse)
-        .filter(AIResponse.experiment_id == experiment.id)
-        .order_by(AIResponse.id.asc())
+def _load_related(
+    db: Session, responses: list[AIResponse]
+) -> tuple[dict[int, LLMEvaluation], dict[int, HumanEvaluation], dict[int, RiskResult]]:
+    response_ids = [item.id for item in responses]
+    if not response_ids:
+        return {}, {}, {}
+    llms = {
+        item.response_id: item
+        for item in db.query(LLMEvaluation)
+        .filter(LLMEvaluation.response_id.in_(response_ids))
         .all()
-    )
+    }
+    humans = {
+        item.response_id: item
+        for item in db.query(HumanEvaluation)
+        .filter(HumanEvaluation.response_id.in_(response_ids))
+        .all()
+    }
+    risks = {
+        item.response_id: item
+        for item in db.query(RiskResult).filter(RiskResult.response_id.in_(response_ids)).all()
+    }
+    return llms, humans, risks
+
+
+def _comparison_from_responses(
+    experiment: Experiment,
+    responses: list[AIResponse],
+    llms: dict[int, LLMEvaluation],
+    humans: dict[int, HumanEvaluation],
+    risks: dict[int, RiskResult],
+) -> ExperimentComparison:
     baseline = _pick(responses, "baseline")
     ai = _pick(responses, "ai_ethics_guided")
     buddhist = _pick(
@@ -98,9 +115,9 @@ def build_comparison(db: Session, experiment: Experiment) -> ExperimentCompariso
         "buddhist_guided",
     )
 
-    baseline_side = _side_payload(db, baseline)
-    ai_side = _side_payload(db, ai)
-    buddhist_side = _side_payload(db, buddhist)
+    baseline_side = _side_payload(baseline, llms=llms, humans=humans, risks=risks)
+    ai_side = _side_payload(ai, llms=llms, humans=humans, risks=risks)
+    buddhist_side = _side_payload(buddhist, llms=llms, humans=humans, risks=risks)
 
     def safety_of(side: ConditionComparisonSide | None) -> float | None:
         if side and side.risk_result:
@@ -157,6 +174,38 @@ def build_comparison(db: Session, experiment: Experiment) -> ExperimentCompariso
     )
 
 
+def build_comparisons(db: Session, experiments: list[Experiment]) -> list[ExperimentComparison]:
+    """여러 실험의 3조건 비교를 응답·평가·위험도 3쿼리로 만든다."""
+    if not experiments:
+        return []
+    experiment_ids = [item.id for item in experiments]
+    responses = (
+        db.query(AIResponse)
+        .filter(AIResponse.experiment_id.in_(experiment_ids))
+        .order_by(AIResponse.id.asc())
+        .all()
+    )
+    llms, humans, risks = _load_related(db, responses)
+    grouped: dict[int, list[AIResponse]] = defaultdict(list)
+    for response in responses:
+        if response.experiment_id is not None:
+            grouped[response.experiment_id].append(response)
+    return [
+        _comparison_from_responses(
+            experiment,
+            grouped.get(experiment.id, []),
+            llms,
+            humans,
+            risks,
+        )
+        for experiment in experiments
+    ]
+
+
+def build_comparison(db: Session, experiment: Experiment) -> ExperimentComparison:
+    return build_comparisons(db, [experiment])[0]
+
+
 class ExperimentRunner:
     def __init__(
         self,
@@ -180,7 +229,11 @@ class ExperimentRunner:
             name=name or f"Q{question.id} 3조건 윤리 비교",
             description=description
             or f"질문 #{question.id} baseline / AI 윤리 / 불교 윤리 비교 실험",
-            model_name=self.generator.llm_client.resolve_model(),
+            model_name=(
+                self.generator.llm_client.resolve_model()
+                if callable(getattr(self.generator.llm_client, "resolve_model", None))
+                else self.settings.llm_model
+            ),
             temperature=self.settings.llm_temperature,
             question_id=question.id,
         )
