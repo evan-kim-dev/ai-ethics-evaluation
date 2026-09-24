@@ -130,3 +130,31 @@ def test_share_link_multi_rater_public_flow(client, clean_db):
     meta = client.get(f"/api/responses/{response_id}/share-link")
     assert meta.status_code == 200
     assert meta.json()["rating_count"] == 2
+
+def test_researcher_can_list_and_delete_baseline_ratings(client, clean_db, monkeypatch):
+    monkeypatch.setenv("RESEARCHER_PASSWORD", "thesis-admin")
+    from app.core.config import reload_settings
+
+    reload_settings()
+    token = client.post("/api/researcher/login", json={"password": "thesis-admin"}).json()["token"]
+    headers = {"X-Researcher-Token": token}
+
+    _, response_id = _create_baseline_response(client)
+    created = client.post(
+        f"/api/responses/{response_id}/baseline-rating",
+        json={"star_rating": 4.0, "evaluator_id": "share-check", "note": "test"},
+        headers=headers,
+    )
+    assert created.status_code == 201
+
+    listed = client.get("/api/baseline-ratings", headers=headers)
+    assert listed.status_code == 200
+    assert any(item["evaluator_id"] == "share-check" for item in listed.json())
+
+    deleted = client.delete(
+        f"/api/responses/{response_id}/baseline-ratings/share-check",
+        headers=headers,
+    )
+    assert deleted.status_code == 204
+    again = client.get("/api/baseline-ratings", headers=headers)
+    assert all(item["evaluator_id"] != "share-check" for item in again.json())

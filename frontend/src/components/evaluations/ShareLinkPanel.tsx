@@ -3,6 +3,7 @@ import { Copy, Download, Link2, RefreshCw } from 'lucide-react'
 
 import {
   createOrGetShareLink,
+  deleteBaselineRating,
   fetchBaselineRatings,
   fetchShareLink,
 } from '@/api/evaluations'
@@ -88,6 +89,22 @@ export function ShareLinkPanel({
       questionText,
       baselineResponse,
     })
+  }
+
+  const handleDeleteRating = async (item: BaselineRating) => {
+    if (!window.confirm(`${item.evaluator_id} 별점(${item.star_rating.toFixed(1)})을 삭제할까요?`)) {
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await deleteBaselineRating(responseId, item.evaluator_id)
+      await refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '별점 삭제에 실패했습니다.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const avg =
@@ -181,11 +198,12 @@ export function ShareLinkPanel({
                   <th className="px-3 py-2 font-medium">별점</th>
                   <th className="px-3 py-2 font-medium">메모</th>
                   <th className="px-3 py-2 font-medium">업데이트</th>
+                  <th className="px-3 py-2 font-medium">작업</th>
                 </tr>
               </thead>
               <tbody>
                 {ratings.map((item) => (
-                  <tr key={item.id} className="border-t border-border">
+                  <tr key={`${item.response_id}-${item.evaluator_id}`} className="border-t border-border">
                     <td className="px-3 py-2 font-medium">{item.evaluator_id}</td>
                     <td className="px-3 py-2 font-semibold text-amber-700">
                       {item.star_rating.toFixed(1)}
@@ -195,6 +213,17 @@ export function ShareLinkPanel({
                     </td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">
                       {formatDateTime(item.updated_at)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-8 px-2 text-xs text-danger hover:bg-red-50"
+                        disabled={busy || loading}
+                        onClick={() => void handleDeleteRating(item)}
+                      >
+                        삭제
+                      </Button>
                     </td>
                   </tr>
                 ))}

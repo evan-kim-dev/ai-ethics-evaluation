@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.sqlite_store import (
+    delete_baseline_rating_blob,
+    list_all_baseline_rating_blobs,
     list_baseline_rating_blobs,
     read_baseline_rating_blob,
     save_baseline_rating_blob,
@@ -17,6 +19,7 @@ from app.models.rating_share_link import RatingShareLink, generate_share_token
 from app.models.response import AIResponse
 from app.models.risk_result import RiskResult
 from app.schemas.evaluation import (
+    BaselineRatingAdminRead,
     BaselineRatingCreate,
     BaselineRatingRead,
     BaselineRatingUpdate,
@@ -33,6 +36,7 @@ from app.services.llm_client import LLMClientError
 from app.services.llm_judge import LLMJudge, LLMJudgeError
 from app.services.risk_service import resolve_and_store_risk, upsert_risk_result
 from app.services.rater_accounts import assert_issued_rater
+from app.services.researcher_auth import assert_researcher, is_researcher
 from app.services.scoring import ScoreBundle
 
 router = APIRouter(tags=["evaluations"])
@@ -352,10 +356,12 @@ def create_baseline_rating(
     payload: BaselineRatingCreate,
     db: Session = Depends(get_db),
     x_rater_token: str | None = Header(default=None),
+    x_researcher_token: str | None = Header(default=None, alias="X-Researcher-Token"),
 ) -> BaselineRating:
     response = _get_response_or_404(db, response_id)
     _ensure_baseline_response(response)
-    assert_issued_rater(db, payload.evaluator_id, x_rater_token)
+    if not is_researcher(db, x_researcher_token):
+        assert_issued_rater(db, payload.evaluator_id, x_rater_token)
     return _upsert_baseline_rating(
         db,
         response_id=response_id,
@@ -371,12 +377,14 @@ def update_baseline_rating(
     payload: BaselineRatingUpdate,
     db: Session = Depends(get_db),
     x_rater_token: str | None = Header(default=None),
+    x_researcher_token: str | None = Header(default=None, alias="X-Researcher-Token"),
 ) -> BaselineRating:
     rating = db.get(BaselineRating, rating_id)
     if rating is None:
         raise HTTPException(status_code=404, detail="별점 평가를 찾을 수 없습니다.")
     next_evaluator = payload.evaluator_id if payload.evaluator_id is not None else rating.evaluator_id
-    assert_issued_rater(db, str(next_evaluator), x_rater_token)
+    if not is_researcher(db, x_researcher_token):
+        assert_issued_rater(db, str(next_evaluator), x_rater_token)
     data = payload.model_dump(exclude_unset=True)
     if "evaluator_id" in data and data["evaluator_id"] is not None:
         data["evaluator_id"] = str(data["evaluator_id"]).strip() or rating.evaluator_id
@@ -388,6 +396,92 @@ def update_baseline_rating(
     db.commit()
     db.refresh(rating)
     return _mirror_rating(rating)
+
+
+@router.delete(
+    "/responses/{response_id}/baseline-ratings/{evaluator_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_baseline_rating_by_evaluator(
+    response_id: int,
+    evaluator_id: str,
+    db: Session = Depends(get_db),
+    x_researcher_token: str | None = Header(default=None, alias="X-Researcher-Token"),
+) -> None:
+    """연구자가 수집된 별점 1건을 삭제한다."""
+    assert_researcher(db, x_researcher_token)
+    _get_response_or_404(db, response_id)
+    cleaned = evaluator_id.strip()
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="평가자 ID가 필요합니다.")
+    row = (
+        db.query(BaselineRating)
+        .filter(
+            BaselineRating.response_id == response_id,
+            BaselineRating.evaluator_id == cleaned,
+        )
+        .one_or_none()
+    )
+    if row is not None:
+        db.delete(row)
+        db.commit()
+    delete_baseline_rating_blob(response_id, cleaned)
+
+
+@router.get("/baseline-ratings", response_model=list[BaselineRatingAdminRead])
+def list_all_baseline_ratings(
+    db: Session = Depends(get_db),
+    x_researcher_token: str | None = Header(default=None, alias="X-Researcher-Token"),
+) -> list[BaselineRatingAdminRead]:
+    """연구자용: 수집된 Baseline 별점 전체."""
+    assert_researcher(db, x_researcher_token)
+    rows = db.query(BaselineRating).order_by(BaselineRating.updated_at.desc()).all()
+    merged: dict[tuple[int, str], dict] = {
+        (row.response_id, row.evaluator_id): _rating_record(row) for row in rows
+    }
+    for blob in list_all_baseline_rating_blobs():
+        try:
+            response_id = int(blob.get("response_id"))
+        except (TypeError, ValueError):
+            continue
+        evaluator = str(blob.get("evaluator_id") or "").strip()
+        if not evaluator:
+            continue
+        key = (response_id, evaluator)
+        current = merged.get(key)
+        if current is None or _stamp(blob.get("updated_at")) >= _stamp(current.get("updated_at")):
+            merged[key] = blob
+
+    response_ids = sorted({key[0] for key in merged})
+    responses = {
+        item.id: item
+        for item in db.query(AIResponse).filter(AIResponse.id.in_(response_ids)).all()
+    } if response_ids else {}
+    question_ids = sorted({item.question_id for item in responses.values()})
+    questions = {
+        item.id: item
+        for item in db.query(Question).filter(Question.id.in_(question_ids)).all()
+    } if question_ids else {}
+
+    ordered = sorted(merged.values(), key=lambda item: _stamp(item.get("updated_at")), reverse=True)
+    result: list[BaselineRatingAdminRead] = []
+    for item in ordered:
+        try:
+            response_id = int(item.get("response_id"))
+        except (TypeError, ValueError):
+            continue
+        response = responses.get(response_id)
+        question = questions.get(response.question_id) if response is not None else None
+        base = BaselineRatingRead.model_validate(item)
+        result.append(
+            BaselineRatingAdminRead(
+                **base.model_dump(),
+                question_id=response.question_id if response else None,
+                question_text=question.text if question else None,
+                condition=response.condition if response else None,
+            )
+        )
+    return result
 
 
 @router.get(

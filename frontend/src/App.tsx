@@ -8,7 +8,7 @@ import { EvaluationPage } from '@/pages/EvaluationPage'
 import { LiveChatEvalPage } from '@/pages/LiveChatEvalPage'
 import { PublicRatePageView } from '@/pages/PublicRatePage'
 import { QuestionsPage } from '@/pages/QuestionsPage'
-import { ResponsesPage } from '@/pages/ResponsesPage'
+import { RatingsManagePage } from '@/pages/RatingsManagePage'
 import { ResultsPage } from '@/pages/ResultsPage'
 import { ReviewWalkPage } from '@/pages/ReviewWalkPage'
 
@@ -27,7 +27,8 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="guide" element={<GuidePage />} />
         <Route path="questions" element={<QuestionsPage />} />
-        <Route path="responses" element={<ResponsesPage />} />
+        <Route path="ratings" element={<RatingsManagePage />} />
+        <Route path="responses" element={<Navigate to="/ratings" replace />} />
         <Route path="evaluation" element={<EvaluationPage />} />
         <Route path="live-chat" element={<LiveChatEvalPage />} />
         <Route path="ethics-workspace" element={<EthicsWorkspacePage />} />

@@ -250,6 +250,105 @@ def delete_baseline_rating_blobs_for_response(response_id: int) -> None:
             continue
 
 
+def delete_baseline_rating_blob(response_id: int, evaluator_id: str) -> None:
+    """별점 1건 Blob을 지운다."""
+    auth = _blob_auth()
+    if auth is None:
+        return
+    token, store_id = auth
+    pathname = _rating_pathname(response_id, evaluator_id)
+    url = f"https://{store_id}.private.blob.vercel-storage.com/{pathname}"
+    # Prefer listed URL when available so delete matches the stored object.
+    try:
+        listed = httpx.get(
+            _BLOB_API,
+            params={"prefix": pathname},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "x-api-version": "12",
+            },
+            timeout=15.0,
+        )
+        if listed.status_code == 200:
+            blobs = listed.json().get("blobs")
+            if isinstance(blobs, list):
+                for blob in blobs:
+                    if isinstance(blob, dict) and str(blob.get("pathname") or "") == pathname:
+                        candidate = str(blob.get("url") or "").strip()
+                        if candidate:
+                            url = candidate
+                        break
+    except (httpx.HTTPError, json.JSONDecodeError, TypeError):
+        pass
+    try:
+        httpx.delete(
+            _BLOB_API,
+            params={"url": url},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "x-api-version": "12",
+            },
+            timeout=15.0,
+        )
+    except httpx.HTTPError:
+        return
+
+
+def list_all_baseline_rating_blobs() -> list[dict]:
+    """모든 응답의 별점 Blob을 모은다."""
+    auth = _blob_auth()
+    if auth is None:
+        return []
+    token, store_id = auth
+    prefix = "baseline-ratings/"
+    try:
+        response = httpx.get(
+            _BLOB_API,
+            params={"prefix": prefix},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "x-api-version": "12",
+            },
+            timeout=30.0,
+        )
+    except httpx.HTTPError:
+        return []
+    if response.status_code != 200:
+        return []
+    try:
+        blobs = response.json().get("blobs")
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(blobs, list):
+        return []
+    records: list[dict] = []
+    for blob in blobs:
+        if not isinstance(blob, dict):
+            continue
+        pathname = str(blob.get("pathname") or "")
+        if not pathname.startswith(prefix) or not pathname.endswith(".json"):
+            continue
+        url = f"https://{store_id}.private.blob.vercel-storage.com/{pathname}"
+        try:
+            item = httpx.get(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=15.0,
+                follow_redirects=True,
+            )
+        except httpx.HTTPError:
+            continue
+        if item.status_code != 200:
+            continue
+        try:
+            payload = item.json()
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            records.append(payload)
+    return records
+
+
 def save_json_blob(pathname: str, record: dict) -> bool:
     """JSON 한 건을 Blob에 올린다. 토큰이 없으면 로컬 SQLite만 쓰는 것으로 보고 성공한다."""
     auth = _blob_auth()

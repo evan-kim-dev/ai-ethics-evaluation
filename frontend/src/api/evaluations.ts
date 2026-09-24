@@ -3,6 +3,7 @@ import axios from 'axios'
 import { apiClient } from '@/api/client'
 import type {
   BaselineRating,
+  BaselineRatingAdmin,
   BaselineRatingInput,
   HumanEvaluation,
   HumanEvaluationInput,
@@ -101,6 +102,20 @@ export async function fetchBaselineRatings(responseId: number): Promise<Baseline
     `/api/responses/${responseId}/baseline-ratings`,
   )
   return data
+}
+
+export async function fetchAllBaselineRatings(): Promise<BaselineRatingAdmin[]> {
+  const { data } = await apiClient.get<BaselineRatingAdmin[]>('/api/baseline-ratings')
+  return data
+}
+
+export async function deleteBaselineRating(
+  responseId: number,
+  evaluatorId: string,
+): Promise<void> {
+  await apiClient.delete(
+    `/api/responses/${responseId}/baseline-ratings/${encodeURIComponent(evaluatorId)}`,
+  )
 }
 
 export async function createOrGetShareLink(responseId: number): Promise<RatingShareLink> {

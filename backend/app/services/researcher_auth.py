@@ -77,3 +77,11 @@ def assert_researcher(db: Session, token: str | None) -> None:
         raise HTTPException(status_code=401, detail="연구자 로그인이 필요합니다.")
     if _stamp(session.get("expires_at")) < datetime.now(timezone.utc):
         raise HTTPException(status_code=401, detail="연구자 로그인이 만료되었습니다. 다시 로그인해 주세요.")
+
+
+def is_researcher(db: Session, token: str | None) -> bool:
+    try:
+        assert_researcher(db, token)
+        return True
+    except HTTPException:
+        return False

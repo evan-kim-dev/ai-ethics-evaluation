@@ -63,6 +63,12 @@ export interface BaselineRating {
   updated_at: string
 }
 
+export interface BaselineRatingAdmin extends BaselineRating {
+  question_id: number | null
+  question_text: string | null
+  condition: string | null
+}
+
 export interface BaselineRatingInput {
   star_rating: number
   evaluator_id: string

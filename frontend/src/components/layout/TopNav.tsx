@@ -10,7 +10,7 @@ import {
   LineChart,
   Menu,
   MessageSquareText,
-  MessagesSquare,
+  Star,
   Scale,
   X,
   type LucideIcon,
@@ -54,7 +54,7 @@ const navSections: NavSection[] = [
     title: '관리',
     items: [
       { to: '/questions', label: '질문 관리', icon: FileQuestion },
-      { to: '/responses', label: '응답 관리', icon: MessagesSquare },
+      { to: '/ratings', label: '별점 관리', icon: Star },
     ],
   },
 ]

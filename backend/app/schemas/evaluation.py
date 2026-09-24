@@ -104,6 +104,12 @@ class BaselineRatingRead(BaseModel):
     updated_at: datetime
 
 
+class BaselineRatingAdminRead(BaselineRatingRead):
+    question_id: int | None = None
+    question_text: str | None = None
+    condition: str | None = None
+
+
 class RatingShareLinkRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
