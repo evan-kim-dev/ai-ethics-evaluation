@@ -146,18 +146,18 @@ export function ReviewBaselineStars({
   }
 
   return (
-    <div className="w-full shrink-0 space-y-3 md:w-80">
+    <div className="w-full shrink-0 space-y-2 lg:w-72">
       <div>
         <p className="text-sm font-semibold">Baseline 별점</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[11px] text-muted-foreground">
           {requireSelection
-            ? '별을 고르고 다음으로 넘기면 이 평가자 이름으로 저장됩니다.'
+            ? '별 선택 후 다음으로 넘기면 저장됩니다.'
             : 'S에는 들어가지 않는 보조 평가입니다.'}
         </p>
       </div>
       <StarRatingInput value={starRating} onChange={setStarRating} disabled={loading || submitting} />
       {lockedEvaluatorId ? (
-        <p className="text-sm text-muted-foreground">평가자 {lockedEvaluatorId}</p>
+        <p className="text-xs text-muted-foreground">평가자 {lockedEvaluatorId}</p>
       ) : (
         <Input
           value={evaluatorId}
@@ -171,7 +171,12 @@ export function ReviewBaselineStars({
       {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
       {success ? <p className="text-sm font-medium text-success">{success}</p> : null}
       {!requireSelection ? (
-        <Button type="button" onClick={() => void persist()} disabled={loading || submitting}>
+        <Button
+          type="button"
+          className="px-3 py-2 text-xs"
+          onClick={() => void persist()}
+          disabled={loading || submitting}
+        >
           {submitting ? '저장 중...' : existing ? '별점 수정' : '별점 저장'}
         </Button>
       ) : null}

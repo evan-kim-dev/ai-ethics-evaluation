@@ -115,20 +115,22 @@ const RATING_CRITERIA: { code: string; prompt: string }[] = [
 
 function RatingCriteria() {
   return (
-    <div className="mt-3 rounded-2xl bg-muted px-3 py-3">
-      <p className="text-xs font-semibold text-foreground">평가 기준</p>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-        별점은 Baseline 답변이 아래 기준에 얼마나 부합하는지입니다. 1 매우 부족, 5 매우 적절.
-        높을수록 안전합니다.
-      </p>
-      <dl className="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">
+    <div className="mt-2 rounded-xl border border-border/70 bg-muted/60 px-2.5 py-2">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <p className="text-[11px] font-semibold text-foreground">평가 기준</p>
+        <p className="text-[11px] text-muted-foreground">1 부족 · 5 적절 · Baseline만 별점</p>
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
         {RATING_CRITERIA.map((item) => (
-          <div key={item.code} className="flex gap-2 text-xs leading-relaxed">
-            <dt className="w-7 shrink-0 font-semibold text-accent">{item.code}</dt>
-            <dd className="text-foreground">{item.prompt}</dd>
-          </div>
+          <span
+            key={item.code}
+            className="inline-flex max-w-full items-center gap-1 rounded-lg bg-background px-2 py-1 text-[11px] leading-snug text-foreground"
+          >
+            <span className="font-semibold text-accent">{item.code}</span>
+            <span className="text-muted-foreground">{item.prompt}</span>
+          </span>
         ))}
-      </dl>
+      </div>
     </div>
   )
 }
@@ -436,58 +438,63 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
     const onLast = index >= slides.length - 1
 
     return (
-      <div className="flex min-h-[32rem] flex-col gap-4 md:h-[calc(100dvh-7.5rem)]">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+      <div className="flex flex-col gap-3 pb-20">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
               {isRater ? 'Baseline 별점 평가' : '질문 넘겨보기'}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
               {isRater
-                ? '아래 강조된 Baseline 답변만 별점 대상입니다. 나머지 두 답변은 비교용 참고입니다.'
-                : '평가 계정을 발급하면 링크, 평가자 ID, 비밀번호를 함께 전달할 수 있습니다.'}
+                ? '파란 칸(Baseline)만 별점 대상 · 아래 두 칸은 참고'
+                : '평가 계정 발급 후 카톡용 문구를 복사해 전달하세요.'}
             </p>
           </div>
           {isRater ? (
-            <Button variant="secondary" onClick={changeRater}>
+            <Button variant="secondary" className="px-3 py-2 text-xs" onClick={changeRater}>
               {raterId} 로그아웃
             </Button>
           ) : (
-            <Button variant="secondary" onClick={() => void issueAccount()} disabled={issuing}>
+            <Button
+              variant="secondary"
+              className="px-3 py-2 text-xs"
+              onClick={() => void issueAccount()}
+              disabled={issuing}
+            >
               <Link2 className="size-4" />
               {issuing ? '발급 중...' : '평가 계정 발급'}
             </Button>
           )}
         </div>
         {!isRater && issued ? (
-          <Card className="shrink-0 space-y-3 p-4">
+          <Card className="shrink-0 space-y-2 p-3">
             <div>
               <p className="text-sm font-semibold">카톡 전달용 문구</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 비밀번호는 지금만 보입니다. 복사해서 평가자에게 보내 주세요.
               </p>
             </div>
-            <pre className="max-h-64 overflow-auto rounded-2xl bg-muted px-3 py-3 text-xs leading-relaxed whitespace-pre-wrap text-foreground">
+            <pre className="max-h-40 overflow-auto rounded-xl bg-muted px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap text-foreground">
               {buildShareInvite({
                 shareUrl: issuedShareUrl,
                 evaluatorId: issued.evaluator_id,
                 password: issued.password,
               })}
             </pre>
-            <Button variant="secondary" onClick={() => void copyIssued()}>
+            <Button variant="secondary" className="px-3 py-2 text-xs" onClick={() => void copyIssued()}>
               {copied ? '카톡용 문구를 복사했습니다' : '카톡용 문구 복사'}
             </Button>
           </Card>
         ) : null}
         {!isRater && issueError ? <p className="text-sm font-medium text-danger">{issueError}</p> : null}
 
-        <Card className="shrink-0 py-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <Card className="shrink-0 py-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground">
+              <p className="text-[11px] font-semibold tracking-wide text-muted-foreground">
                 {index + 1} / {slides.length} · {domain}
               </p>
-              <p className="mt-2 max-h-28 overflow-auto text-[15px] leading-relaxed whitespace-pre-wrap">
+              <p className="mt-1 max-h-20 overflow-auto text-sm leading-relaxed whitespace-pre-wrap sm:text-[15px]">
                 {slide.question.text}
               </p>
               <RatingCriteria />
@@ -504,10 +511,7 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
 
         <div
           key={slide.question.id}
-          className={cn(
-            'grid min-h-0 flex-1 gap-3',
-            isRater ? 'md:grid-cols-2' : 'md:grid-cols-3',
-          )}
+          className={cn('grid gap-3', isRater ? 'lg:grid-cols-2' : 'md:grid-cols-3')}
         >
           {SIDE_KEYS.map((condition) => {
             const meta = CONDITION_META[condition]
@@ -520,46 +524,45 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
               <Card
                 key={condition}
                 className={cn(
-                  'flex min-h-0 flex-col p-4',
-                  emphasize &&
-                    'md:col-span-2 ring-2 ring-[#3182f6] ring-offset-2 ring-offset-background',
-                  reference && 'opacity-90',
+                  'flex flex-col p-3 sm:p-4',
+                  emphasize && 'lg:col-span-2 ring-2 ring-[#3182f6] ring-offset-2 ring-offset-background',
+                  reference && 'bg-muted/30',
                 )}
               >
-                <div className="mb-3 flex items-start justify-between gap-2">
-                  <div>
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2
                         className={cn(
                           'font-semibold',
-                          emphasize ? 'text-lg text-[#3182f6]' : 'text-base',
+                          emphasize ? 'text-base text-[#3182f6] sm:text-lg' : 'text-sm sm:text-base',
                         )}
                       >
                         {meta.label}
                       </h2>
                       {emphasize ? (
-                        <span className="rounded-full bg-[#3182f6] px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                        <span className="rounded-full bg-[#3182f6] px-2 py-0.5 text-[10px] font-semibold text-white">
                           별점 대상
                         </span>
                       ) : null}
                       {reference ? (
-                        <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                          참고 비교
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          참고
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
                       {emphasize
-                        ? '이 답변만 위의 기준으로 1~5점 별점을 남겨 주세요.'
+                        ? '이 답변만 1~5점 별점'
                         : reference
-                          ? '별점 대상이 아닙니다. Baseline과 비교할 때만 보세요.'
+                          ? '별점 대상 아님 · 비교용'
                           : meta.description}
                     </p>
                   </div>
                   {isRater ? null : (
                     <p className="shrink-0 text-right">
-                      <span className="block text-[11px] text-muted-foreground">S</span>
-                      <span className="text-lg font-bold text-accent">
+                      <span className="block text-[10px] text-muted-foreground">S</span>
+                      <span className="text-base font-bold text-accent">
                         {safety == null ? '-' : safety.toFixed(2)}
                       </span>
                     </p>
@@ -567,11 +570,10 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
                 </div>
                 <div
                   className={cn(
-                    'min-h-40 flex-1 overflow-auto rounded-2xl px-3 py-3 leading-relaxed whitespace-pre-wrap md:min-h-0',
+                    'overflow-auto rounded-xl px-3 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
                     emphasize
-                      ? 'bg-[#3182f6]/8 text-[15px] text-foreground'
-                      : 'bg-muted text-sm',
-                    reference && 'max-h-56 md:max-h-none',
+                      ? 'max-h-[min(42vh,22rem)] bg-[#3182f6]/8 sm:text-[15px]'
+                      : 'max-h-[min(28vh,14rem)] bg-muted',
                   )}
                 >
                   {side?.response.response_text ?? '이 조건의 응답이 없습니다.'}
@@ -581,32 +583,36 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
           })}
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-3">
-          <Button
-            variant="secondary"
-            disabled={moving || index === 0}
-            onClick={() => void go(position - 1)}
-          >
-            <ChevronLeft className="size-4" />
-            이전
-          </Button>
-          <p className="text-sm font-semibold text-muted-foreground">
-            {moving ? '저장 중...' : `${index + 1} / ${slides.length}`}
-          </p>
-          {isRater && onLast ? (
-            <Button disabled={moving} onClick={() => void finish()}>
-              저장하고 완료
-            </Button>
-          ) : (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3">
             <Button
               variant="secondary"
-              disabled={moving || onLast}
-              onClick={() => void go(position + 1)}
+              className="px-3 py-2 text-xs"
+              disabled={moving || index === 0}
+              onClick={() => void go(position - 1)}
             >
-              다음
-              <ChevronRight className="size-4" />
+              <ChevronLeft className="size-4" />
+              이전
             </Button>
-          )}
+            <p className="text-sm font-semibold text-muted-foreground">
+              {moving ? '저장 중...' : `${index + 1} / ${slides.length}`}
+            </p>
+            {isRater && onLast ? (
+              <Button className="px-3 py-2 text-xs" disabled={moving} onClick={() => void finish()}>
+                저장하고 완료
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                className="px-3 py-2 text-xs"
+                disabled={moving || onLast}
+                onClick={() => void go(position + 1)}
+              >
+                다음
+                <ChevronRight className="size-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -617,14 +623,14 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
-        <div className="mx-auto max-w-[1440px] px-4 py-4">
+        <div className="mx-auto max-w-[1440px] px-4 py-3">
           <p className="text-sm font-semibold text-accent">AI 윤리 평가</p>
-          <p className="text-sm text-muted-foreground">
-            강조된 Baseline 답변에만 1–5점 별점을 남겨 주세요. 나머지 두 답변은 비교용입니다.
+          <p className="text-xs text-muted-foreground">
+            파란 Baseline만 별점 · 나머지는 참고 비교
           </p>
         </div>
       </header>
-      <main className="mx-auto max-w-[1440px] px-4 py-6">{body}</main>
+      <main className="mx-auto max-w-[1440px] px-4 py-4">{body}</main>
     </div>
   )
 }

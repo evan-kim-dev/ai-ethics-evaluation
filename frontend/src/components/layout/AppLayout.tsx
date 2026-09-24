@@ -15,8 +15,8 @@ export function AppLayout() {
         <main
           key={location.pathname}
           className={cn(
-            'mx-auto w-full flex-1 animate-fade-up px-4 py-6 sm:px-6 lg:px-8',
-            wide ? 'max-w-[1440px]' : 'max-w-6xl',
+            'mx-auto w-full flex-1 animate-fade-up px-4 py-4 sm:px-6 lg:px-8',
+            wide ? 'max-w-[1440px] pb-4' : 'max-w-6xl py-6',
           )}
         >
           <Outlet />
