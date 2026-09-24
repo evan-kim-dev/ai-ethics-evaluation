@@ -59,10 +59,12 @@ export async function fetchHumanEvaluation(
 export async function createBaselineRating(
   responseId: number,
   payload: BaselineRatingInput,
+  raterToken?: string,
 ): Promise<BaselineRating> {
   const { data } = await apiClient.post<BaselineRating>(
     `/api/responses/${responseId}/baseline-rating`,
     payload,
+    raterToken ? { headers: { 'X-Rater-Token': raterToken } } : undefined,
   )
   return data
 }
@@ -154,6 +156,30 @@ export async function fetchLlmEvaluation(
     if (isNotFound(err)) return null
     throw err
   }
+}
+
+export type IssuedRaterAccount = {
+  evaluator_id: string
+  password: string
+}
+
+export type RaterLogin = {
+  evaluator_id: string
+  token: string
+  expires_at: string
+}
+
+export async function issueRaterAccount(): Promise<IssuedRaterAccount> {
+  const { data } = await apiClient.post<IssuedRaterAccount>('/api/rater-accounts')
+  return data
+}
+
+export async function loginRaterAccount(evaluatorId: string, password: string): Promise<RaterLogin> {
+  const { data } = await apiClient.post<RaterLogin>('/api/rater-accounts/login', {
+    evaluator_id: evaluatorId,
+    password,
+  })
+  return data
 }
 
 export async function fetchRiskResult(responseId: number): Promise<RiskResult | null> {

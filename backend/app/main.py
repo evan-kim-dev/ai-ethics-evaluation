@@ -7,6 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import get_settings, reload_settings
 from app.core.database import SessionLocal, init_db
+from app.core.sqlite_store import persist_sqlite
 from app.core.request_context import (
     get_effective_llm_base_url,
     get_effective_llm_model,
@@ -17,7 +18,7 @@ from app.core.request_context import (
     llm_base_url_override,
     llm_model_override,
 )
-from app.routers import dashboard, evaluations, experiments, questions, responses
+from app.routers import dashboard, evaluations, experiments, questions, rater_accounts, responses
 from app.services.seed_data import seed_questions_from_csv
 
 SAMPLE_CSV_PATH = Path(__file__).resolve().parents[2] / "data" / "sample_questions.csv"
@@ -51,6 +52,7 @@ def _cors_origins() -> list[str]:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins(),
+    allow_origin_regex=r"https://ai-ethics-evaluation.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,7 +73,10 @@ class LlmRuntimeMiddleware(BaseHTTPMiddleware):
             (request.headers.get("X-LLM-Base-URL") or "").strip() or None
         )
         try:
-            return await call_next(request)
+            response = await call_next(request)
+            if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+                persist_sqlite()
+            return response
         finally:
             llm_api_key_override.reset(key_token)
             llm_model_override.reset(model_token)
@@ -83,6 +88,7 @@ app.add_middleware(LlmRuntimeMiddleware)
 app.include_router(questions.router, prefix="/api")
 app.include_router(responses.router, prefix="/api")
 app.include_router(evaluations.router, prefix="/api")
+app.include_router(rater_accounts.router, prefix="/api")
 app.include_router(experiments.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 

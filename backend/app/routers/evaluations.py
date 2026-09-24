@@ -1,9 +1,14 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.sqlite_store import (
+    list_baseline_rating_blobs,
+    read_baseline_rating_blob,
+    save_baseline_rating_blob,
+)
 from app.models.baseline_rating import BaselineRating
 from app.models.human_evaluation import HumanEvaluation
 from app.models.llm_evaluation import LLMEvaluation
@@ -27,6 +32,7 @@ from app.schemas.risk_result import RiskResultRead
 from app.services.llm_client import LLMClientError
 from app.services.llm_judge import LLMJudge, LLMJudgeError
 from app.services.risk_service import resolve_and_store_risk, upsert_risk_result
+from app.services.rater_accounts import assert_issued_rater
 from app.services.scoring import ScoreBundle
 
 router = APIRouter(tags=["evaluations"])
@@ -70,7 +76,7 @@ def _upsert_baseline_rating(
         existing.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(existing)
-        return existing
+        return _mirror_rating(existing)
 
     rating = BaselineRating(
         response_id=response_id,
@@ -81,7 +87,48 @@ def _upsert_baseline_rating(
     db.add(rating)
     db.commit()
     db.refresh(rating)
+    return _mirror_rating(rating)
+
+
+def _rating_record(rating: BaselineRating) -> dict:
+    return {
+        "id": rating.id,
+        "response_id": rating.response_id,
+        "evaluator_id": rating.evaluator_id,
+        "star_rating": rating.star_rating,
+        "note": rating.note or "",
+        "created_at": rating.created_at.isoformat(),
+        "updated_at": rating.updated_at.isoformat(),
+    }
+
+
+def _stamp(value: datetime | str | None) -> datetime:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str) and value:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    else:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _mirror_rating(rating: BaselineRating) -> BaselineRating:
+    if not save_baseline_rating_blob(_rating_record(rating)):
+        raise HTTPException(
+            status_code=503,
+            detail="별점 저장본을 올리지 못했습니다. 다시 저장해 주세요.",
+        )
     return rating
+
+
+def _prefer_blob(sqlite_rating: BaselineRating | None, blob: dict | None) -> BaselineRating | BaselineRatingRead | None:
+    if blob is None:
+        return sqlite_rating
+    if sqlite_rating is None or _stamp(blob.get("updated_at")) >= _stamp(sqlite_rating.updated_at):
+        return BaselineRatingRead.model_validate(blob)
+    return sqlite_rating
 
 
 def _share_link_read(db: Session, link: RatingShareLink) -> RatingShareLinkRead:
@@ -299,9 +346,11 @@ def create_baseline_rating(
     response_id: int,
     payload: BaselineRatingCreate,
     db: Session = Depends(get_db),
+    x_rater_token: str | None = Header(default=None),
 ) -> BaselineRating:
     response = _get_response_or_404(db, response_id)
     _ensure_baseline_response(response)
+    assert_issued_rater(db, payload.evaluator_id, x_rater_token)
     return _upsert_baseline_rating(
         db,
         response_id=response_id,
@@ -316,10 +365,13 @@ def update_baseline_rating(
     rating_id: int,
     payload: BaselineRatingUpdate,
     db: Session = Depends(get_db),
+    x_rater_token: str | None = Header(default=None),
 ) -> BaselineRating:
     rating = db.get(BaselineRating, rating_id)
     if rating is None:
         raise HTTPException(status_code=404, detail="별점 평가를 찾을 수 없습니다.")
+    next_evaluator = payload.evaluator_id if payload.evaluator_id is not None else rating.evaluator_id
+    assert_issued_rater(db, str(next_evaluator), x_rater_token)
     data = payload.model_dump(exclude_unset=True)
     if "evaluator_id" in data and data["evaluator_id"] is not None:
         data["evaluator_id"] = str(data["evaluator_id"]).strip() or rating.evaluator_id
@@ -330,7 +382,7 @@ def update_baseline_rating(
     rating.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(rating)
-    return rating
+    return _mirror_rating(rating)
 
 
 @router.get(
@@ -341,16 +393,21 @@ def get_baseline_rating(
     response_id: int,
     evaluator_id: str | None = Query(default=None),
     db: Session = Depends(get_db),
-) -> BaselineRating:
+) -> BaselineRating | BaselineRatingRead:
     _get_response_or_404(db, response_id)
     query = db.query(BaselineRating).filter(BaselineRating.response_id == response_id)
     if evaluator_id:
-        rating = query.filter(BaselineRating.evaluator_id == evaluator_id.strip()).one_or_none()
+        cleaned = evaluator_id.strip()
+        rating = query.filter(BaselineRating.evaluator_id == cleaned).one_or_none()
+        chosen = _prefer_blob(rating, read_baseline_rating_blob(response_id, cleaned))
     else:
         rating = query.order_by(BaselineRating.updated_at.desc()).first()
-    if rating is None:
+        blobs = list_baseline_rating_blobs(response_id)
+        newest = max(blobs, key=lambda item: _stamp(item.get("updated_at")), default=None)
+        chosen = _prefer_blob(rating, newest)
+    if chosen is None:
         raise HTTPException(status_code=404, detail="별점 평가를 찾을 수 없습니다.")
-    return rating
+    return chosen
 
 
 @router.get(
@@ -360,14 +417,24 @@ def get_baseline_rating(
 def list_baseline_ratings(
     response_id: int,
     db: Session = Depends(get_db),
-) -> list[BaselineRating]:
+) -> list[BaselineRatingRead]:
     _get_response_or_404(db, response_id)
-    return (
+    rows = (
         db.query(BaselineRating)
         .filter(BaselineRating.response_id == response_id)
         .order_by(BaselineRating.updated_at.desc())
         .all()
     )
+    merged: dict[str, dict] = {row.evaluator_id: _rating_record(row) for row in rows}
+    for blob in list_baseline_rating_blobs(response_id):
+        key = str(blob.get("evaluator_id") or "")
+        if not key:
+            continue
+        current = merged.get(key)
+        if current is None or _stamp(blob.get("updated_at")) >= _stamp(current.get("updated_at")):
+            merged[key] = blob
+    ordered = sorted(merged.values(), key=lambda item: _stamp(item.get("updated_at")), reverse=True)
+    return [BaselineRatingRead.model_validate(item) for item in ordered]
 
 
 @router.post(
@@ -459,6 +526,7 @@ def submit_public_rating(
 
     response = _get_response_or_404(db, link.response_id)
     _ensure_baseline_response(response)
+    assert_issued_rater(db, payload.evaluator_id, None)
     return _upsert_baseline_rating(
         db,
         response_id=response.id,

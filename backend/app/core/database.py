@@ -4,12 +4,14 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import get_settings
+from app.core.sqlite_store import prepare_sqlite_url
 
 settings = get_settings()
+database_url = prepare_sqlite_url(settings.database_url)
 
-connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
 
-engine = create_engine(settings.database_url, connect_args=connect_args)
+engine = create_engine(database_url, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

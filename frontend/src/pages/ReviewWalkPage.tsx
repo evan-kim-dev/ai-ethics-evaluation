@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { ChevronLeft, ChevronRight, Link2 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 
+import { issueRaterAccount, loginRaterAccount, type IssuedRaterAccount } from '@/api/evaluations'
 import { fetchLatestComparisons } from '@/api/experiments'
 import { fetchQuestions } from '@/api/questions'
 import { ErrorAlert } from '@/components/common/ErrorAlert'
@@ -48,13 +49,17 @@ function safetyOf(side: ConditionComparisonSide | null): number | null {
   return score == null ? null : score
 }
 
-const RATER_STORAGE_KEY = 'baseline_rater_id'
+const SHARE_ID_KEY = 'share_rater_id'
+const SHARE_TOKEN_KEY = 'share_rater_token'
 
-function readStoredRaterId(): string {
+function readShareSession(): { id: string; token: string } {
   try {
-    return localStorage.getItem(RATER_STORAGE_KEY)?.trim() ?? ''
+    return {
+      id: sessionStorage.getItem(SHARE_ID_KEY)?.trim() ?? '',
+      token: sessionStorage.getItem(SHARE_TOKEN_KEY)?.trim() ?? '',
+    }
   } catch {
-    return ''
+    return { id: '', token: '' }
   }
 }
 
@@ -66,13 +71,15 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
   const [copied, setCopied] = useState(false)
   const [moving, setMoving] = useState(false)
   const [finished, setFinished] = useState(false)
-  const [raterId, setRaterId] = useState(() => {
-    if (audience !== 'rater') return ''
-    const stored = readStoredRaterId()
-    return stored.toLowerCase() === 'researcher' ? '' : stored
-  })
+  const [raterId, setRaterId] = useState(() => (audience === 'rater' ? readShareSession().id : ''))
+  const [raterToken, setRaterToken] = useState(() => (audience === 'rater' ? readShareSession().token : ''))
   const [draftRaterId, setDraftRaterId] = useState('')
+  const [draftPassword, setDraftPassword] = useState('')
   const [gateError, setGateError] = useState<string | null>(null)
+  const [gateBusy, setGateBusy] = useState(false)
+  const [issued, setIssued] = useState<IssuedRaterAccount | null>(null)
+  const [issuing, setIssuing] = useState(false)
+  const [issueError, setIssueError] = useState<string | null>(null)
   const saveRef = useRef<() => Promise<boolean>>(async () => true)
   const movingRef = useRef(false)
   const registerSave = useCallback((save: () => Promise<boolean>) => {
@@ -143,7 +150,7 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (finished || (isRater && !raterId)) return
+      if (finished || (isRater && (!raterId || !raterToken))) return
       const target = event.target
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
       if (event.key === 'ArrowLeft') void go(position - 1)
@@ -161,40 +168,65 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
     return new URL('/review/share', window.location.origin).toString()
   }, [])
 
-  const claimRater = (event: FormEvent) => {
+  const claimRater = async (event: FormEvent) => {
     event.preventDefault()
     const cleaned = draftRaterId.trim()
-    if (!cleaned) {
-      setGateError('평가자 ID를 입력해 주세요. 예: R01')
+    if (!cleaned || !draftPassword) {
+      setGateError('평가자 ID와 비밀번호를 모두 입력해 주세요.')
       return
     }
-    if (cleaned.toLowerCase() === 'researcher') {
-      setGateError('researcher는 연구자 화면 전용입니다. 다른 ID를 입력해 주세요.')
-      return
-    }
-    try {
-      localStorage.setItem(RATER_STORAGE_KEY, cleaned)
-    } catch {
-      /* ignore */
-    }
+    setGateBusy(true)
     setGateError(null)
-    setRaterId(cleaned)
+    try {
+      const session = await loginRaterAccount(cleaned, draftPassword)
+      try {
+        sessionStorage.setItem(SHARE_ID_KEY, session.evaluator_id)
+        sessionStorage.setItem(SHARE_TOKEN_KEY, session.token)
+      } catch {
+        /* ignore */
+      }
+      setDraftPassword('')
+      setRaterId(session.evaluator_id)
+      setRaterToken(session.token)
+    } catch (err) {
+      setGateError(err instanceof Error ? err.message : '로그인에 실패했습니다.')
+    } finally {
+      setGateBusy(false)
+    }
   }
 
   const changeRater = () => {
     try {
-      localStorage.removeItem(RATER_STORAGE_KEY)
+      sessionStorage.removeItem(SHARE_ID_KEY)
+      sessionStorage.removeItem(SHARE_TOKEN_KEY)
     } catch {
       /* ignore */
     }
     setDraftRaterId('')
+    setDraftPassword('')
     setFinished(false)
     setRaterId('')
+    setRaterToken('')
   }
 
-  const copyLink = async () => {
+  const issueAccount = async () => {
+    setIssuing(true)
+    setIssueError(null)
+    setCopied(false)
     try {
-      await navigator.clipboard.writeText(shareUrl)
+      setIssued(await issueRaterAccount())
+    } catch (err) {
+      setIssueError(err instanceof Error ? err.message : '평가 계정을 만들지 못했습니다.')
+    } finally {
+      setIssuing(false)
+    }
+  }
+
+  const copyIssued = async () => {
+    if (!issued) return
+    const text = `평가 링크: ${shareUrl}\n평가자 ID: ${issued.evaluator_id}\n비밀번호: ${issued.password}`
+    try {
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1600)
     } catch {
@@ -203,24 +235,35 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
   }
 
   const body = (() => {
-    if (isRater && !raterId) {
+    if (isRater && (!raterId || !raterToken)) {
       return (
         <Card className="mx-auto max-w-md p-6">
-          <h1 className="text-xl font-bold tracking-tight">평가자 ID</h1>
+          <h1 className="text-xl font-bold tracking-tight">평가 로그인</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            같은 ID로 다시 들어오면 이전에 남긴 별점을 이어서 수정할 수 있습니다. 연구자 화면의
-            점수를 덮어쓰지 않도록 본인만의 ID를 사용해 주세요.
+            전달받은 평가자 ID와 비밀번호를 입력해 주세요. 같은 계정으로 다시 들어오면 이전에 남긴
+            별점을 이어서 수정할 수 있습니다.
           </p>
-          <form className="mt-4 space-y-3" onSubmit={claimRater}>
+          <form className="mt-4 space-y-3" onSubmit={(event) => void claimRater(event)}>
             <Input
               value={draftRaterId}
               onChange={(event) => setDraftRaterId(event.target.value)}
-              placeholder="예: R01"
+              placeholder="평가자 ID"
               aria-label="평가자 ID"
+              autoComplete="username"
               autoFocus
             />
+            <Input
+              value={draftPassword}
+              onChange={(event) => setDraftPassword(event.target.value)}
+              placeholder="비밀번호"
+              aria-label="비밀번호"
+              type="password"
+              autoComplete="current-password"
+            />
             {gateError ? <p className="text-sm font-medium text-danger">{gateError}</p> : null}
-            <Button type="submit">평가 시작</Button>
+            <Button type="submit" disabled={gateBusy}>
+              {gateBusy ? '확인 중...' : '평가 시작'}
+            </Button>
           </form>
         </Card>
       )
@@ -243,8 +286,8 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
         <Card className="mx-auto max-w-lg p-6">
           <h1 className="text-xl font-bold tracking-tight">평가를 저장했습니다</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {raterId} 이름으로 마지막 질문까지 별점을 저장했습니다. 같은 ID로 다시 열면 점수를 수정할 수
-            있습니다.
+            {raterId} 이름으로 마지막 질문까지 별점을 저장했습니다. 같은 계정으로 다시 로그인하면 점수를
+            수정할 수 있습니다.
           </p>
           <Button className="mt-4" variant="secondary" onClick={() => setFinished(false)}>
             다시 보기
@@ -266,20 +309,32 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
             <p className="mt-1 text-sm text-muted-foreground">
               {isRater
                 ? '질문과 세 답변을 본 뒤 baseline 답변에 별점을 고르고 다음으로 넘기면 저장됩니다.'
-                : '질문 하나와 세 조건 답변입니다. 평가 링크를 받은 사람은 별점만 남깁니다.'}
+                : '평가 계정을 발급하면 링크, 평가자 ID, 비밀번호를 함께 전달할 수 있습니다.'}
             </p>
           </div>
           {isRater ? (
             <Button variant="secondary" onClick={changeRater}>
-              평가자 {raterId} 변경
+              {raterId} 로그아웃
             </Button>
           ) : (
-            <Button variant="secondary" onClick={() => void copyLink()}>
+            <Button variant="secondary" onClick={() => void issueAccount()} disabled={issuing}>
               <Link2 className="size-4" />
-              {copied ? '평가 링크를 복사했습니다' : '평가 링크 복사'}
+              {issuing ? '발급 중...' : '평가 계정 발급'}
             </Button>
           )}
         </div>
+        {!isRater && issued ? (
+          <Card className="shrink-0 space-y-2 p-4">
+            <p className="text-sm font-semibold">이 계정을 평가자에게 전달하세요. 비밀번호는 지금만 보입니다.</p>
+            <p className="font-mono text-sm">평가 링크: {shareUrl}</p>
+            <p className="font-mono text-sm">평가자 ID: {issued.evaluator_id}</p>
+            <p className="font-mono text-sm">비밀번호: {issued.password}</p>
+            <Button variant="secondary" onClick={() => void copyIssued()}>
+              {copied ? '전달 문구를 복사했습니다' : '전달 문구 복사'}
+            </Button>
+          </Card>
+        ) : null}
+        {!isRater && issueError ? <p className="text-sm font-medium text-danger">{issueError}</p> : null}
 
         <Card className="shrink-0 py-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -296,6 +351,7 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
               lockedEvaluatorId={isRater ? raterId : undefined}
               requireSelection={isRater}
               bindSave={isRater ? registerSave : undefined}
+              accessToken={isRater ? raterToken : undefined}
             />
           </div>
         </Card>

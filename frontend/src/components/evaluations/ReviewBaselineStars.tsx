@@ -21,11 +21,13 @@ export function ReviewBaselineStars({
   lockedEvaluatorId,
   requireSelection = false,
   bindSave,
+  accessToken,
 }: {
   responseId: number | null
   lockedEvaluatorId?: string
   requireSelection?: boolean
   bindSave?: (save: () => Promise<boolean>) => void
+  accessToken?: string
 }) {
   const [evaluatorId, setEvaluatorId] = useState(lockedEvaluatorId ?? readEvaluatorId)
   const [appliedEvaluator, setAppliedEvaluator] = useState(lockedEvaluatorId ?? readEvaluatorId)
@@ -41,6 +43,7 @@ export function ReviewBaselineStars({
     existing,
     evaluatorId: lockedEvaluatorId ?? evaluatorId,
     requireSelection,
+    accessToken,
   })
 
   useEffect(() => {
@@ -56,6 +59,7 @@ export function ReviewBaselineStars({
     existing,
     evaluatorId: (lockedEvaluatorId ?? evaluatorId).trim() || 'researcher',
     requireSelection,
+    accessToken,
   }
 
   const persistRef = useRef<() => Promise<boolean>>(async () => true)
@@ -72,17 +76,23 @@ export function ReviewBaselineStars({
     setError(null)
     setSuccess(null)
     try {
-      const saved = await createBaselineRating(current.responseId, {
-        star_rating: current.starRating,
-        evaluator_id: current.evaluatorId,
-        note: current.existing?.note ?? '',
-      })
+      const saved = await createBaselineRating(
+        current.responseId,
+        {
+          star_rating: current.starRating,
+          evaluator_id: current.evaluatorId,
+          note: current.existing?.note ?? '',
+        },
+        current.accessToken,
+      )
       setExisting(saved)
       setStarRating(saved.star_rating)
-      try {
-        localStorage.setItem(EVALUATOR_STORAGE_KEY, current.evaluatorId)
-      } catch {
-        /* ignore */
+      if (!current.accessToken) {
+        try {
+          localStorage.setItem(EVALUATOR_STORAGE_KEY, current.evaluatorId)
+        } catch {
+          /* ignore */
+        }
       }
       setSuccess('저장했습니다')
       return true
