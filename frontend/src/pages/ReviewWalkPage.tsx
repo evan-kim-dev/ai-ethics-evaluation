@@ -15,6 +15,7 @@ import type { ExperimentComparison, ConditionComparisonSide } from '@/types/expe
 import type { Question } from '@/types/question'
 import { CONDITION_META, type Condition } from '@/utils/condition'
 import { DOMAIN_LABELS } from '@/utils/constants'
+import { cn } from '@/lib/utils'
 
 type Slide = {
   question: Question
@@ -83,7 +84,8 @@ function buildShareInvite({
     '',
     '아래 링크를 누르면 ID·비밀번호가 자동으로 입력되어',
     '바로 평가를 시작할 수 있습니다.',
-    '질문마다 Baseline 답변에만 1~5점 별점을 남겨 주세요.',
+    '화면에서 파란색으로 강조된 Baseline 답변에만',
+    '1~5점 별점을 남겨 주세요. 나머지 두 답변은 참고용입니다.',
     '(별을 고르고 「다음」을 누르면 저장됩니다.)',
     '',
     '▶ 바로 시작 링크',
@@ -442,7 +444,7 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {isRater
-                ? '질문과 세 답변을 본 뒤 baseline 답변에 별점을 고르고 다음으로 넘기면 저장됩니다.'
+                ? '아래 강조된 Baseline 답변만 별점 대상입니다. 나머지 두 답변은 비교용 참고입니다.'
                 : '평가 계정을 발급하면 링크, 평가자 ID, 비밀번호를 함께 전달할 수 있습니다.'}
             </p>
           </div>
@@ -500,17 +502,59 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
           </div>
         </Card>
 
-        <div key={slide.question.id} className="grid min-h-0 flex-1 gap-3 md:grid-cols-3">
+        <div
+          key={slide.question.id}
+          className={cn(
+            'grid min-h-0 flex-1 gap-3',
+            isRater ? 'md:grid-cols-2' : 'md:grid-cols-3',
+          )}
+        >
           {SIDE_KEYS.map((condition) => {
             const meta = CONDITION_META[condition]
             const side = sideFor(slide.comparison, condition)
             const safety = safetyOf(side)
+            const isBaseline = condition === 'baseline'
+            const emphasize = isRater && isBaseline
+            const reference = isRater && !isBaseline
             return (
-              <Card key={condition} className="flex min-h-0 flex-col p-4">
+              <Card
+                key={condition}
+                className={cn(
+                  'flex min-h-0 flex-col p-4',
+                  emphasize &&
+                    'md:col-span-2 ring-2 ring-[#3182f6] ring-offset-2 ring-offset-background',
+                  reference && 'opacity-90',
+                )}
+              >
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <div>
-                    <h2 className="text-base font-semibold">{meta.label}</h2>
-                    <p className="text-xs text-muted-foreground">{meta.description}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2
+                        className={cn(
+                          'font-semibold',
+                          emphasize ? 'text-lg text-[#3182f6]' : 'text-base',
+                        )}
+                      >
+                        {meta.label}
+                      </h2>
+                      {emphasize ? (
+                        <span className="rounded-full bg-[#3182f6] px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                          별점 대상
+                        </span>
+                      ) : null}
+                      {reference ? (
+                        <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                          참고 비교
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {emphasize
+                        ? '이 답변만 위의 기준으로 1~5점 별점을 남겨 주세요.'
+                        : reference
+                          ? '별점 대상이 아닙니다. Baseline과 비교할 때만 보세요.'
+                          : meta.description}
+                    </p>
                   </div>
                   {isRater ? null : (
                     <p className="shrink-0 text-right">
@@ -521,7 +565,15 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
                     </p>
                   )}
                 </div>
-                <div className="min-h-40 flex-1 overflow-auto rounded-2xl bg-muted px-3 py-3 text-sm leading-relaxed whitespace-pre-wrap md:min-h-0">
+                <div
+                  className={cn(
+                    'min-h-40 flex-1 overflow-auto rounded-2xl px-3 py-3 leading-relaxed whitespace-pre-wrap md:min-h-0',
+                    emphasize
+                      ? 'bg-[#3182f6]/8 text-[15px] text-foreground'
+                      : 'bg-muted text-sm',
+                    reference && 'max-h-56 md:max-h-none',
+                  )}
+                >
                   {side?.response.response_text ?? '이 조건의 응답이 없습니다.'}
                 </div>
               </Card>
@@ -568,7 +620,7 @@ export function ReviewWalkPage({ audience = 'researcher' }: { audience?: 'resear
         <div className="mx-auto max-w-[1440px] px-4 py-4">
           <p className="text-sm font-semibold text-accent">AI 윤리 평가</p>
           <p className="text-sm text-muted-foreground">
-            세 답변을 비교한 뒤, baseline 답변에만 1–5점 별점을 남겨 주세요.
+            강조된 Baseline 답변에만 1–5점 별점을 남겨 주세요. 나머지 두 답변은 비교용입니다.
           </p>
         </div>
       </header>
