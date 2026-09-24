@@ -95,23 +95,30 @@ export function ShareLinkPanel({
       : null
 
   return (
-    <Card className="space-y-4 hover:translate-y-0">
-      <div>
-        <h3 className="text-lg font-bold tracking-tight">타인에게 평가 받기</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          배포 없이도 가능합니다. HTML 파일을 카톡/메일로 보내세요. (권장)
-        </p>
+    <Card className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-bold tracking-tight">다른 사람 평가</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            파일로 보내거나, 배포 후 링크로 모읍니다.
+          </p>
+        </div>
+        {avg != null ? (
+          <div className="rounded-2xl bg-amber-50 px-3 py-2 text-right">
+            <p className="text-lg font-bold text-amber-800">{avg.toFixed(2)}</p>
+            <p className="text-[11px] font-medium text-amber-700">{ratings.length}명 평균</p>
+          </div>
+        ) : null}
       </div>
 
       <div className="rounded-2xl bg-accent/5 px-4 py-3">
-        <p className="text-sm font-semibold text-accent">추천 · 파일로 보내기</p>
+        <p className="text-sm font-semibold text-accent">파일로 보내기</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          질문 + Baseline 응답이 들어 있는 HTML을 다운로드한 뒤 파일만 전달하면 됩니다.
-          평가자는 별점을 매기고 「결과 문구 복사」로 답장을 보냅니다.
+          HTML을 전달하면 평가자가 별점을 매기고 결과 문구를 답장합니다. 서버가 없어도 됩니다.
         </p>
         <Button type="button" className="mt-3" onClick={handleDownloadHtml}>
           <Download size={14} />
-          이 질문 평가용 HTML 다운로드
+          평가용 HTML
         </Button>
       </div>
 

@@ -2,8 +2,6 @@ import { Star } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
-const STEPS = Array.from({ length: 9 }, (_, i) => 1 + i * 0.5)
-
 function fillRatio(starIndex: number, value: number): number {
   const start = starIndex
   const end = starIndex + 1
@@ -22,18 +20,19 @@ export function StarRatingInput({
   disabled?: boolean
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-4">
+      <div
+        className="flex items-center gap-1"
+        role="radiogroup"
+        aria-label="별점"
+      >
         {[0, 1, 2, 3, 4].map((starIndex) => {
           const ratio = fillRatio(starIndex, value)
           return (
-            <div key={starIndex} className="relative h-9 w-9">
-              <Star size={34} className="absolute inset-0 m-auto text-slate-300" />
-              <div
-                className="absolute inset-0 overflow-hidden"
-                style={{ width: `${ratio * 100}%` }}
-              >
-                <Star size={34} className="m-auto fill-amber-400 text-amber-400" />
+            <div key={starIndex} className="relative h-10 w-10">
+              <Star size={32} strokeWidth={1.75} className="absolute inset-0 m-auto text-border" />
+              <div className="absolute inset-0 overflow-hidden" style={{ width: `${ratio * 100}%` }}>
+                <Star size={32} strokeWidth={1.75} className="m-auto fill-amber-400 text-amber-400" />
               </div>
               <button
                 type="button"
@@ -52,28 +51,24 @@ export function StarRatingInput({
             </div>
           )
         })}
-        <span className="ml-2 text-lg font-semibold text-amber-700">{value.toFixed(1)}</span>
       </div>
-
-      <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
-        {STEPS.map((step) => (
-          <button
-            key={step}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(step)}
-            className={cn(
-              'rounded-md border px-2 py-1.5 text-xs font-medium transition sm:px-2 sm:py-1',
-              value === step
-                ? 'border-amber-500 bg-amber-50 text-amber-800'
-                : 'border-border bg-white text-slate-600 hover:bg-muted',
-              disabled && 'cursor-not-allowed opacity-50',
-            )}
-          >
-            {step.toFixed(1)}점
-          </button>
-        ))}
+      <div className="min-w-[4.5rem]">
+        <p className="text-2xl font-bold tracking-tight text-foreground">{value.toFixed(1)}</p>
+        <p className="text-xs text-muted-foreground">1.0–5.0 · 반 칸</p>
       </div>
+      <input
+        type="range"
+        min={1}
+        max={5}
+        step={0.5}
+        value={value}
+        disabled={disabled}
+        aria-label="별점 조절"
+        onChange={(event) => onChange(Number(event.target.value))}
+        className={cn(
+          'h-1.5 w-full max-w-xs cursor-pointer accent-[#3182f6] disabled:cursor-not-allowed disabled:opacity-50',
+        )}
+      />
     </div>
   )
 }

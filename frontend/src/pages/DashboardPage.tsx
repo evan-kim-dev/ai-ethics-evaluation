@@ -20,6 +20,12 @@ import { CONDITION_META, CONDITIONS, normalizeCondition, type Condition } from '
 import { DOMAIN_LABELS, DOMAIN_OPTIONS } from '@/utils/constants'
 import { buildDashboardInsights } from '@/utils/insights'
 import { maxKeys, minKeys } from '@/utils/metrics'
+import {
+  buildConditionPaperStats,
+  buildDomainDeltas,
+  buildDomainSafetyRows,
+  countBestConditions,
+} from '@/utils/paperStats'
 
 export function DashboardPage() {
   const { summary, conditions, loading, error, reload } = useDashboard()
@@ -82,98 +88,33 @@ export function DashboardPage() {
     [questionRows],
   )
 
-  const bestWins = useMemo(() => {
-    const counts: Record<Condition, number> = {
-      baseline: 0,
-      ai_ethics_guided: 0,
-      ai_ethics_buddhist_guided: 0,
-    }
-    for (const row of analyzedQuestionRows) {
-      const best = row.bestCondition ?? row.safestCondition
-      if (best) counts[best] += 1
-    }
-    return counts
-  }, [analyzedQuestionRows])
+  const bestWins = useMemo(
+    () =>
+      countBestConditions(
+        analyzedQuestionRows.map((row) => ({
+          ...row,
+          bestCondition: row.bestCondition ?? row.safestCondition,
+        })),
+      ),
+    [analyzedQuestionRows],
+  )
 
-  const domainSafetyRows = useMemo(() => {
-    const byDomain = new Map<
-      string,
-      { baseline: number[]; ai: number[]; buddhist: number[] }
-    >()
-    for (const row of analyzedQuestionRows) {
-      const bucket = byDomain.get(row.domain) ?? { baseline: [], ai: [], buddhist: [] }
-      if (row.baselineSafety != null) bucket.baseline.push(row.baselineSafety)
-      if (row.aiSafety != null) bucket.ai.push(row.aiSafety)
-      if (row.buddhistSafety != null) bucket.buddhist.push(row.buddhistSafety)
-      byDomain.set(row.domain, bucket)
-    }
-    const avg = (xs: number[]) =>
-      xs.length === 0 ? null : Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 100) / 100
-    return DOMAIN_OPTIONS.map((d) => d.value)
-      .filter((domain) => byDomain.has(domain))
-      .map((domain) => {
-        const bucket = byDomain.get(domain)!
-        return {
-          domain,
-          baseline: avg(bucket.baseline),
-          ai: avg(bucket.ai),
-          buddhist: avg(bucket.buddhist),
-        }
-      })
-  }, [analyzedQuestionRows])
+  const domainSafetyRows = useMemo(
+    () =>
+      buildDomainSafetyRows(
+        analyzedQuestionRows,
+        DOMAIN_OPTIONS.map((item) => item.value),
+      ),
+    [analyzedQuestionRows],
+  )
 
-  const paperConditionStats = useMemo(() => {
-    const values: Record<Condition, number[]> = {
-      baseline: [],
-      ai_ethics_guided: [],
-      ai_ethics_buddhist_guided: [],
-    }
-    for (const row of analyzedQuestionRows) {
-      if (row.baselineSafety != null) values.baseline.push(row.baselineSafety)
-      if (row.aiSafety != null) values.ai_ethics_guided.push(row.aiSafety)
-      if (row.buddhistSafety != null) values.ai_ethics_buddhist_guided.push(row.buddhistSafety)
-    }
-    const meanSd = (xs: number[]) => {
-      if (xs.length === 0) return { mean: null as number | null, sd: null as number | null, n: 0 }
-      const mean = xs.reduce((a, b) => a + b, 0) / xs.length
-      const variance = xs.reduce((a, b) => a + (b - mean) ** 2, 0) / xs.length
-      return {
-        mean: Math.round(mean * 100) / 100,
-        sd: Math.round(Math.sqrt(variance) * 100) / 100,
-        n: xs.length,
-      }
-    }
-    const baselineMean = meanSd(values.baseline).mean
-    return CONDITIONS.map((condition) => {
-      const stats = meanSd(values[condition])
-      const deltaVsBaseline =
-        condition === 'baseline' || baselineMean == null || stats.mean == null
-          ? null
-          : Math.round((stats.mean - baselineMean) * 100) / 100
-      return {
-        condition,
-        mean: stats.mean,
-        sd: stats.sd,
-        n: stats.n,
-        deltaVsBaseline,
-      }
-    })
-  }, [analyzedQuestionRows])
+  const paperConditionStats = useMemo(
+    () => buildConditionPaperStats(analyzedQuestionRows),
+    [analyzedQuestionRows],
+  )
 
   const paperDomainDeltas = useMemo(
-    () =>
-      domainSafetyRows.map((row) => ({
-        domain: row.domain,
-        label: DOMAIN_LABELS[row.domain] ?? row.domain,
-        deltaAi:
-          row.baseline != null && row.ai != null
-            ? Math.round((row.ai - row.baseline) * 100) / 100
-            : null,
-        deltaBuddhist:
-          row.baseline != null && row.buddhist != null
-            ? Math.round((row.buddhist - row.baseline) * 100) / 100
-            : null,
-      })),
+    () => buildDomainDeltas(domainSafetyRows, DOMAIN_LABELS),
     [domainSafetyRows],
   )
 

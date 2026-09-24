@@ -6,7 +6,7 @@ export function PageTitle({
   description?: string
 }) {
   return (
-    <div className="mb-6 animate-fade-up">
+    <div className="animate-fade-up">
       <h1 className="text-[1.65rem] font-bold tracking-tight text-foreground sm:text-[1.85rem]">
         {title}
       </h1>

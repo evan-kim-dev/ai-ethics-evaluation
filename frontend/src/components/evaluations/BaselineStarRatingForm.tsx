@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import type { BaselineRating, BaselineRatingInput } from '@/types/evaluation'
-import { cn } from '@/lib/utils'
 
 export function BaselineStarRatingForm({
   existing,
@@ -33,7 +32,7 @@ export function BaselineStarRatingForm({
         evaluator_id: existing?.evaluator_id?.trim() || 'researcher',
         note: note.trim(),
       })
-      setSuccess(existing ? '저장되었습니다.' : '별점과 코멘트가 저장되었습니다.')
+      setSuccess(existing ? '수정되었습니다.' : '연구자 별점이 저장되었습니다.')
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장에 실패했습니다.')
     } finally {
@@ -42,50 +41,38 @@ export function BaselineStarRatingForm({
   }
 
   const body = (
-    <>
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       {!embedded ? (
-        <>
-          <h3 className="mb-1 text-base font-semibold">Baseline 별점 · 코멘트</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Baseline 응답에 1.0~5.0점(0.5 단위)과 짧은 코멘트를 남깁니다.
+        <div>
+          <h3 className="text-base font-bold tracking-tight">연구자 별점</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Baseline만 평가합니다. S 점수에는 반영되지 않는 보조 기록입니다.
           </p>
-        </>
+        </div>
       ) : null}
 
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">별점</label>
-          <StarRatingInput
-            value={starRating}
-            onChange={setStarRating}
-            disabled={submitting}
-          />
-        </div>
+      <StarRatingInput value={starRating} onChange={setStarRating} disabled={submitting} />
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">코멘트</label>
-          <Textarea
-            rows={3}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="이 응답이 왜 좋은지/아쉬운지 짧게 적어 주세요."
-            disabled={submitting}
-          />
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-semibold">코멘트</label>
+        <Textarea
+          rows={3}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="좋은 점, 아쉬운 점을 한두 문장으로"
+          disabled={submitting}
+        />
+      </div>
 
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
-        {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
+      {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
+      {success ? <p className="text-sm font-medium text-success">{success}</p> : null}
 
-        <Button type="submit" disabled={submitting} className="w-full sm:w-auto self-start">
-          {submitting ? '저장 중...' : existing ? '수정 저장' : '별점 · 코멘트 저장'}
-        </Button>
-      </form>
-    </>
+      <Button type="submit" disabled={submitting} className="self-start">
+        {submitting ? '저장 중...' : existing ? '별점 수정' : '별점 저장'}
+      </Button>
+    </form>
   )
 
-  if (embedded) {
-    return <div className={cn('flex flex-col')}>{body}</div>
-  }
-
+  if (embedded) return body
   return <Card>{body}</Card>
 }

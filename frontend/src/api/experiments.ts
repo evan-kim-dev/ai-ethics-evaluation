@@ -53,6 +53,11 @@ export async function fetchLatestExperimentForQuestion(
   }
 }
 
+export async function fetchLatestComparisons(): Promise<ExperimentComparison[]> {
+  const { data } = await apiClient.get<ExperimentComparison[]>('/api/experiments/latest-comparisons')
+  return data
+}
+
 export async function fetchExperiments(): Promise<Experiment[]> {
   const { data } = await apiClient.get<Experiment[]>('/api/experiments', {
     params: { limit: 500 },

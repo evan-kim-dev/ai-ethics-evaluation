@@ -31,7 +31,7 @@ export function ComparisonSideCard({
           C2: scores.C2,
           N1: scores.N1,
           N2: scores.N2,
-          O7: risk?.input_output_alignment_score ?? 0,
+          O7: Math.round((scores.C1 + scores.C2) / 2),
         }
       : null,
     E_score: risk?.E_score,

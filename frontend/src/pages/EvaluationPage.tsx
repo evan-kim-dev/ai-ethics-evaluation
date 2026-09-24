@@ -142,167 +142,135 @@ export function EvaluationPage() {
     setRating(saved)
   }
 
+  const compareConditions = CONDITIONS.filter((condition) => condition !== 'baseline')
+
   return (
     <div className="space-y-6">
       <PageTitle
-        title="Baseline 별점 평가"
-        description="질문을 고르면 저장된 3조건 응답을 불러오고, Baseline에 별점·코멘트를 남깁니다."
+        title="Baseline 별점"
+        description="저장된 Baseline 응답만 사람이 1.0–5.0점으로 평가합니다. 루브릭 S와는 별도입니다."
       />
 
       {questionsError ? <ErrorAlert message={questionsError} /> : null}
       {error ? <ErrorAlert message={error} /> : null}
 
-      <Card className="space-y-5">
-        <div>
-          <h2 className="text-lg font-semibold">질문 선택</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            도메인별로 질문을 고르면, 아래에 저장된 응답과 별점 칸이 열립니다.
-          </p>
-        </div>
-
-        {questionsLoading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <LoadingSpinner /> 질문 불러오는 중...
+      <div className="grid items-start gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
+        <Card className="space-y-3 lg:sticky lg:top-20">
+          <div>
+            <h2 className="text-sm font-bold">질문</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">도메인을 펼쳐 고르세요.</p>
           </div>
-        ) : (
-          <DomainQuestionPicker
-            questions={questions}
-            value={questionId}
-            onChange={setQuestionId}
-            defaultExpandAll
-          />
-        )}
-
-        {selectedQuestion ? (
-          <div className="space-y-4 border-t border-border pt-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-900">
-                  선택 질문 #{selectedQuestion.id}
-                  {currentIndex >= 0 ? (
-                    <span className="ml-2 text-xs font-medium text-muted-foreground">
-                      ({currentIndex + 1} / {questionIds.length})
-                    </span>
-                  ) : null}
-                </p>
-                <p className="mt-1 text-sm leading-relaxed text-slate-700">
-                  {selectedQuestion.text}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {loadingResponse ? (
-                  <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <LoadingSpinner /> 응답 불러오는 중
-                  </span>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="h-9 px-3 text-xs"
-                  disabled={currentIndex <= 0}
-                  onClick={goPrev}
-                >
-                  이전
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="h-9 px-3 text-xs"
-                  disabled={currentIndex < 0 || currentIndex >= questionIds.length - 1}
-                  onClick={goNext}
-                >
-                  다음
-                </Button>
-              </div>
+          {questionsLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <LoadingSpinner /> 불러오는 중
             </div>
+          ) : (
+            <DomainQuestionPicker questions={questions} value={questionId} onChange={setQuestionId} />
+          )}
+        </Card>
 
-            {!loadingResponse && !hasAnyResponse ? (
-              <div className="rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
-                이 질문에 저장된 실험 응답이 없습니다.{' '}
-                <Link to="/ethics-workspace" className="underline">
-                  윤리 워크스페이스
-                </Link>
-                에서 먼저 실행하세요.
-              </div>
-            ) : null}
-
-            {hasAnyResponse ? (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                {CONDITIONS.map((condition) => {
-                  const response = conditionResponses[condition]
-                  const meta = CONDITION_META[condition]
-                  const isBaseline = condition === 'baseline'
-                  return (
-                    <div
-                      key={condition}
-                      className={cn(
-                        'flex min-h-0 flex-col gap-3 rounded-xl border px-3 py-3',
-                        isBaseline
-                          ? 'border-amber-300/90 bg-gradient-to-b from-amber-50 to-white'
-                          : 'border-border/90 bg-gradient-to-b from-slate-50 to-white',
-                      )}
-                    >
-                      <div className="flex flex-col gap-1">
-                        <span
-                          className={cn(
-                            'w-fit rounded-md border px-2 py-0.5 text-xs font-medium',
-                            meta.badgeClass,
-                          )}
-                        >
-                          {meta.label}
-                        </span>
-                        {isBaseline ? (
-                          <span className="text-xs font-medium text-amber-800">
-                            별점 · 코멘트 대상
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {response ? (
-                        <p className="max-h-[28rem] flex-1 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
-                          {response.response_text}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">이 조건 응답 없음</p>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            ) : null}
-
-            {baseline ? (
-              <div className="space-y-4">
-                <div className="rounded-[24px] border border-amber-200 bg-amber-50/30 px-4 py-4">
-                  <BaselineStarRatingForm
-                    key={`${baseline.id}-${rating?.id ?? 'new'}`}
-                    existing={rating}
-                    embedded
-                    onSubmit={handleSaveRating}
-                  />
+        <div className="space-y-4">
+          {selectedQuestion ? (
+            <Card className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold tracking-wide text-muted-foreground">
+                    질문 #{selectedQuestion.id}
+                    {currentIndex >= 0 ? ` · ${currentIndex + 1}/${questionIds.length}` : ''}
+                  </p>
+                  <p className="mt-1 text-[15px] leading-relaxed">{selectedQuestion.text}</p>
                 </div>
-                <ShareLinkPanel
-                  responseId={baseline.id}
-                  questionId={selectedQuestion.id}
-                  questionText={selectedQuestion.text}
-                  baselineResponse={baseline.response_text}
-                />
+                <div className="flex shrink-0 gap-2">
+                  <Button type="button" variant="secondary" className="h-9 px-3" disabled={currentIndex <= 0} onClick={goPrev}>
+                    이전
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-9 px-3"
+                    disabled={currentIndex < 0 || currentIndex >= questionIds.length - 1}
+                    onClick={goNext}
+                  >
+                    다음
+                  </Button>
+                </div>
               </div>
-            ) : !loadingResponse && hasAnyResponse ? (
-              <p className="text-sm text-muted-foreground">
-                Baseline 응답이 없어 별점을 남길 수 없습니다.
-              </p>
-            ) : null}
+              {loadingResponse ? (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <LoadingSpinner /> 응답 불러오는 중
+                </p>
+              ) : null}
+            </Card>
+          ) : null}
 
-
-            {!hasAnyResponse && !loadingResponse ? (
+          {!loadingResponse && selectedQuestion && !hasAnyResponse ? (
+            <Card className="space-y-3">
+              <p className="text-sm text-muted-foreground">이 질문에 저장된 실험 응답이 없습니다.</p>
               <Link to="/ethics-workspace">
-                <Button variant="secondary">윤리 워크스페이스로 이동</Button>
+                <Button variant="secondary">3조건 윤리 분석으로 이동</Button>
               </Link>
-            ) : null}
-          </div>
-        ) : null}
-      </Card>
+            </Card>
+          ) : null}
+
+          {selectedQuestion && baseline ? (
+            <>
+              <Card className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className={cn('rounded-full border px-2.5 py-0.5 text-xs font-semibold', CONDITION_META.baseline.badgeClass)}>
+                    {CONDITION_META.baseline.label}
+                  </span>
+                  <span className="text-xs font-medium text-accent">별점 대상</span>
+                </div>
+                <p className="max-h-80 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
+                  {baseline.response_text}
+                </p>
+              </Card>
+
+              <details className="rounded-[24px] border border-border bg-card px-5 py-4">
+                <summary className="cursor-pointer text-sm font-semibold">다른 조건 응답 비교</summary>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {compareConditions.map((condition) => {
+                    const response = conditionResponses[condition]
+                    const meta = CONDITION_META[condition]
+                    return (
+                      <div key={condition} className="rounded-2xl bg-muted px-3 py-3">
+                        <span className={cn('rounded-full border bg-white px-2 py-0.5 text-xs font-semibold', meta.badgeClass)}>
+                          {meta.shortLabel}
+                        </span>
+                        <p className="mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
+                          {response?.response_text ?? '이 조건 응답 없음'}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </details>
+
+              <Card>
+                <h2 className="text-base font-bold">연구자 별점</h2>
+                <p className="mt-1 mb-4 text-sm text-muted-foreground">
+                  별 왼쪽은 0.5, 오른쪽은 1.0입니다. 슬라이더로도 맞출 수 있습니다.
+                </p>
+                <BaselineStarRatingForm
+                  key={`${baseline.id}-${rating?.id ?? 'new'}`}
+                  existing={rating}
+                  embedded
+                  onSubmit={handleSaveRating}
+                />
+              </Card>
+
+              <ShareLinkPanel
+                responseId={baseline.id}
+                questionId={selectedQuestion.id}
+                questionText={selectedQuestion.text}
+                baselineResponse={baseline.response_text}
+              />
+            </>
+          ) : !loadingResponse && hasAnyResponse ? (
+            <p className="text-sm text-muted-foreground">Baseline 응답이 없어 별점을 남길 수 없습니다.</p>
+          ) : null}
+        </div>
+      </div>
     </div>
   )
 }

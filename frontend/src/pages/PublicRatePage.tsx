@@ -80,7 +80,7 @@ export function PublicRatePageView() {
       } catch {
         /* ignore */
       }
-      setSuccess('평가가 저장되었습니다. 같은 ID로 다시 제출하면 수정됩니다. 감사합니다.')
+      setSuccess('저장되었습니다. 같은 ID로 다시 내면 수정됩니다.')
     } catch (err) {
       setError(err instanceof Error ? err.message : '평가 저장에 실패했습니다.')
     } finally {
@@ -89,79 +89,68 @@ export function PublicRatePageView() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10">
-      <div className="mx-auto w-full max-w-2xl space-y-6">
+    <div className="min-h-screen bg-background px-4 py-8 sm:py-12">
+      <div className="mx-auto w-full max-w-2xl space-y-5">
         <div>
-          <p className="text-sm font-medium text-slate-500">AI Ethics Evaluation</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">Baseline 응답 평가</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            로그인 없이 별점만 남겨 주시면 됩니다. 연구용 데이터로만 사용됩니다.
+          <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+            Research
+          </p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">Baseline 별점</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            로그인 없이 이 응답만 평가해 주세요. 연구용으로만 쓰입니다.
           </p>
         </div>
 
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <LoadingSpinner /> 불러오는 중...
+            <LoadingSpinner /> 불러오는 중
           </div>
         ) : null}
         {error ? <ErrorAlert message={error} /> : null}
 
         {page ? (
           <>
-            <Card className="space-y-3">
+            <Card className="space-y-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">질문</p>
-                <p className="mt-1 text-sm text-slate-800">{page.question_text}</p>
-                <p className="mt-2 text-xs text-muted-foreground">도메인: {page.domain}</p>
+                <p className="text-xs font-semibold text-accent">질문 · {page.domain}</p>
+                <p className="mt-2 text-[15px] leading-relaxed">{page.question_text}</p>
               </div>
-              <div className="border-t border-border pt-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Baseline 응답
-                </p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+              <div className="rounded-2xl bg-muted px-4 py-3">
+                <p className="text-xs font-semibold text-muted-foreground">Baseline 응답</p>
+                <p className="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
                   {page.response_text}
                 </p>
-                <p className="mt-2 text-xs text-muted-foreground">모델: {page.model_name}</p>
               </div>
             </Card>
 
             <Card>
-              <h2 className="mb-1 text-lg font-semibold">별점 남기기</h2>
-              <p className="mb-4 text-sm text-muted-foreground">
-                응답의 전반적 적절성·유용성·안전감을 1.0~5.0점(0.5 단위)으로 평가해 주세요.
+              <h2 className="text-base font-bold">별점</h2>
+              <p className="mt-1 mb-4 text-sm text-muted-foreground">
+                적절성, 유용성, 안전감을 함께 보고 점수를 남겨 주세요.
               </p>
               <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
+                <StarRatingInput value={starRating} onChange={setStarRating} disabled={submitting} />
                 <div>
-                  <label className="mb-2 block text-sm font-medium">별점</label>
-                  <StarRatingInput
-                    value={starRating}
-                    onChange={setStarRating}
-                    disabled={submitting}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">평가자 ID</label>
+                  <label className="mb-1 block text-sm font-semibold">평가자 ID</label>
                   <Input
                     value={evaluatorId}
                     onChange={(e) => setEvaluatorId(e.target.value)}
                     placeholder="예: R01"
                     disabled={submitting}
                   />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    연구자가 안내한 코드(예: R01)를 입력하세요. 실명은 필요 없습니다.
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">실명은 필요 없습니다. 같은 ID는 수정으로 저장됩니다.</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium">메모 (선택)</label>
+                  <label className="mb-1 block text-sm font-semibold">메모</label>
                   <Textarea
                     rows={3}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="짧게 이유를 남겨도 됩니다."
+                    placeholder="선택 사항"
                     disabled={submitting}
                   />
                 </div>
-                {success ? <p className="text-sm text-success">{success}</p> : null}
+                {success ? <p className="text-sm font-medium text-success">{success}</p> : null}
                 <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                   {submitting ? '저장 중...' : '평가 제출'}
                 </Button>

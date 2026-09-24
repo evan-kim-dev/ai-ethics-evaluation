@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { fetchExperimentComparison, fetchExperiments } from '@/api/experiments'
+import { fetchLatestComparisons } from '@/api/experiments'
 import type { ExperimentComparison } from '@/types/experiment'
 import type { Question } from '@/types/question'
 import { normalizeCondition, type Condition } from '@/utils/condition'
@@ -47,7 +47,7 @@ function safetyOf(
           C2: evalScores.C2,
           N1: evalScores.N1,
           N2: evalScores.N2,
-          O7: risk?.input_output_alignment_score ?? 0,
+          O7: Math.round((evalScores.C1 + evalScores.C2) / 2),
         }
       : null,
     E_score: risk?.E_score,
@@ -149,29 +149,13 @@ export function useQuestionExperimentSummaries(questions: Question[]) {
     setLoading(true)
     setError(null)
     try {
-      const experiments = await fetchExperiments()
-      const latestByQuestion = new Map<number, (typeof experiments)[number]>()
-      for (const exp of experiments) {
-        if (exp.question_id == null) continue
-        const prev = latestByQuestion.get(exp.question_id)
-        if (!prev || exp.id > prev.id) latestByQuestion.set(exp.question_id, exp)
-      }
-
+      const comparisons = await fetchLatestComparisons()
       const questionMap = new Map(questions.map((q) => [q.id, q]))
-      const entries = [...latestByQuestion.entries()]
       const summaries: QuestionExperimentSummary[] = []
-
-      await Promise.all(
-        entries.map(async ([questionId, exp]) => {
-          try {
-            const comparison = await fetchExperimentComparison(exp.id)
-            const summary = buildSummary(comparison, questionMap.get(questionId))
-            if (summary) summaries.push(summary)
-          } catch {
-            // skip failed comparison
-          }
-        }),
-      )
+      for (const comparison of comparisons) {
+        const summary = buildSummary(comparison, questionMap.get(comparison.question_id))
+        if (summary) summaries.push(summary)
+      }
 
       summaries.sort((a, b) => b.experimentId - a.experimentId)
       setRows(summaries)
