@@ -125,6 +125,19 @@ Question
                     Dashboard / Results / Paper figures / CSV
 ```
 
+### 근거 문헌으로 `buddhist_guided` 프롬프트 재생성
+
+`ai_ethics_buddhist_guided` 조건은 [A] 대한민국 AI 윤리원칙을 기본 프레임으로 두고, [B] 연기·자비·무아만 **추가 행동**으로 얹습니다. [B]와 [출처]는 논문 제목을 붙인 문구가 아니라, PDF/텍스트에서 고른 **40단어 이내 발췌**와 출처 ID로 채웁니다.
+
+사람이 고치는 템플릿은 `backend/app/prompts/buddhist_guided_system.txt` (`{{GROUNDED_DEPENDENT_ORIGINATION}}` 등)이고, 런타임은 생성된 `buddhist_guided_system.generated.txt`를 읽습니다.
+
+```bash
+cd backend
+python -m app.scripts.build_grounded_prompt
+```
+
+Drive 폴더 `김기훈_논문_AI윤리`의 PDF를 넣는 방법, OA 범위, 재빌드 절차는 [`backend/app/references/README.md`](backend/app/references/README.md)에 있습니다. Sci-Hub 등 불법 사본은 쓰지 않습니다.
+
 ---
 
 ## 3. 기술 스택 & 아키텍처
@@ -280,6 +293,7 @@ ai-ethics-evaluation/
 │  │  ├─ schemas/
 │  │  ├─ services/       # llm, judge, scoring, experiment, dashboard…
 │  │  ├─ prompts/        # 조건별 시스템 프롬프트 · judge
+│  │  ├─ references/    # OA 문헌 manifest · 근거 발췌
 │  │  └─ utils/
 │  ├─ tests/
 │  ├─ scripts/

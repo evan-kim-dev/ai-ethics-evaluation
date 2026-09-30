@@ -52,6 +52,20 @@ Gemini API 키: [Google AI Studio](https://aistudio.google.com/apikey)
 - LLMEvaluation 별도 테이블 저장
 - 인간 평가 우선 / LLM 임시 위험도 규칙
 
+## 근거 기반 buddhist_guided 프롬프트
+
+AI 윤리 원칙 본문은 템플릿에 그대로 두고, 연기·자비·무아 블록만 문헌 발췌로 채웁니다.
+
+```bash
+python -m app.scripts.build_grounded_prompt
+```
+
+- 템플릿: `app/prompts/buddhist_guided_system.txt`
+- 생성본(런타임): `app/prompts/buddhist_guided_system.generated.txt`
+- 문헌 목록·Drive 동기화: `app/references/README.md`
+
+Drive 폴더 `김기훈_논문_AI윤리`의 저작권 PDF는 `app/references/drive/`에만 두고 커밋하지 않습니다.
+
 ## Phase 5 구현 범위
 
 - `POST /api/experiments/run-question/{id}` — 두 조건 동시 실험

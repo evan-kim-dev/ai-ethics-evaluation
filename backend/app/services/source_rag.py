@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -297,6 +299,69 @@ SOURCE_CATALOG = [
     for c in SOURCE_CATALOG
 ]
 
+_GROUNDED_CLAIMS_PATH = (
+    Path(__file__).resolve().parents[1] / "references" / "grounded_claims.json"
+)
+
+
+def _grounded_claim_rows() -> list[dict[str, object]]:
+    if not _GROUNDED_CLAIMS_PATH.exists():
+        return []
+    try:
+        payload = json.loads(_GROUNDED_CLAIMS_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, list):
+        return []
+    return [row for row in payload if isinstance(row, dict) and row.get("source_id")]
+
+
+def grounded_source_chunks() -> list[SourceChunk]:
+    """빌더가 쓴 발췌 청구를 RAG 청크로 붙인다. PDF는 여기서 다시 파싱하지 않는다."""
+    grouped: dict[str, list[dict[str, object]]] = {}
+    for row in _grounded_claim_rows():
+        grouped.setdefault(str(row["source_id"]), []).append(row)
+    chunks: list[SourceChunk] = []
+    for source_id, rows in grouped.items():
+        first = rows[0]
+        excerpts = []
+        for row in rows:
+            quote = str(row.get("quote") or "").strip()
+            concept = str(row.get("concept") or "")
+            hint = str(row.get("paper_section_hint") or "")
+            if quote:
+                excerpts.append(f"[{concept}] {quote}" + (f" ({hint})" if hint else ""))
+        title = str(first.get("title") or source_id)
+        author = str(first.get("author") or "")
+        year = first.get("year")
+        year_bit = f" ({year})" if year else ""
+        chunks.append(
+            SourceChunk(
+                id=source_id,
+                title=f"{author}{year_bit}. {title}".strip(),
+                condition="ai_ethics_buddhist_guided",
+                tags=tuple(
+                    tag
+                    for tag in (
+                        "grounded",
+                        "buddhist",
+                        *(str(row.get("concept") or "") for row in rows),
+                    )
+                    if tag
+                ),
+                text="문헌 발췌: " + " | ".join(excerpts),
+                url=str(first.get("url") or ""),
+            )
+        )
+    return chunks
+
+
+def grounded_source_ids() -> list[str]:
+    return [chunk.id for chunk in grounded_source_chunks()]
+
+
+SOURCE_CATALOG = SOURCE_CATALOG + grounded_source_chunks()
+
 
 CITATION_INSTRUCTION = """
 [출처 인용 규칙 — RAG]
@@ -391,6 +456,7 @@ def retrieve_sources(
     elif condition == "ai_ethics_buddhist_guided":
         # AI 윤리 + 불교 결합: 양쪽 출처를 모두 주입
         must = ["KR-DOC", "KR-P5", "KR-P7", "BUD-1", "BUD-2", "BUD-3"]
+        must.extend(grounded_source_ids())
     else:  # judge
         must = [
             "RUB-E1",
