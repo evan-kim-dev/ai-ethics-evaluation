@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { PageTitle } from '@/components/common/PageTitle'
+import { GroundedPromptClaimsPanel } from '@/components/ethics/GroundedPromptClaimsPanel'
 import { Card } from '@/components/ui/card'
 
 const sections = [
@@ -9,6 +10,7 @@ const sections = [
   { id: 'validity', label: '타당성·한계' },
   { id: 'overview', label: '개요' },
   { id: 'conditions', label: '세 조건' },
+  { id: 'grounding', label: '프롬프트 근거' },
   { id: 'rubric', label: '루브릭' },
   { id: 'formulas', label: '계산식' },
   { id: 'paper', label: '논문 집계' },
@@ -122,7 +124,7 @@ export function GuidePage() {
           </p>
           <ol className="list-decimal space-y-1 pl-5">
             <li>연구 질문을 등록한다. 실시간 테스트 질문은 논문 집계에서 뺀다.</li>
-            <li>같은 질문으로 Baseline, AI 윤리, AI 윤리 + 불교철학 응답을 생성한다.</li>
+            <li>같은 질문으로 Baseline, AI 윤리, AI 윤리 + 불교 행동 응답을 생성한다.</li>
             <li>LLM 심사 또는 인간 루브릭이 E1–N2를 1–5점으로 매긴다.</li>
             <li>그 여섯 점수로 S와 R을 계산하고, 조건별 평균과 Baseline 대비 차이를 본다.</li>
           </ol>
@@ -158,6 +160,10 @@ export function GuidePage() {
             </p>
           </Card>
         </div>
+      </Section>
+
+      <Section id="grounding" title="시스템 프롬프트 근거">
+        <GroundedPromptClaimsPanel />
       </Section>
 
       <Section id="rubric" title="공통 루브릭">

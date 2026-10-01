@@ -10,7 +10,7 @@ import { PROTECTED_VALUES } from '@/utils/ethicsPrinciples'
 const JUDGMENTS = [
   { value: 'baseline_best', label: '기본 응답이 가장 적절함' },
   { value: 'ai_ethics_best', label: 'AI 윤리 적용 응답이 가장 적절함' },
-  { value: 'buddhist_best', label: 'AI 윤리 + 불교철학 응답이 가장 적절함' },
+  { value: 'buddhist_best', label: 'AI 윤리 + 불교 행동 응답이 가장 적절함' },
   { value: 'unclear', label: '특정 조건의 우위를 판단하기 어려움' },
   { value: 'context_dependent', label: '상황과 평가 기준에 따라 다름' },
 ]
@@ -116,7 +116,7 @@ export function ResearcherCommentaryForm({
           rows={3}
         />
       </Field>
-      <Field label="6. AI 윤리 + 불교철학 응답의 윤리적 장점 및 한계">
+      <Field label="6. AI 윤리 + 불교 행동 응답의 윤리적 장점 및 한계">
         <Textarea
           value={value.buddhistEthicsAnalysis}
           onChange={(e) => set('buddhistEthicsAnalysis', e.target.value)}

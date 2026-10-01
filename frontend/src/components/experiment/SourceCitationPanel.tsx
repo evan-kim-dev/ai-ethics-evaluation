@@ -4,11 +4,27 @@ import { BookMarked, ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { SourceCitation } from '@/types/comparison'
 
+const HINT_RE = /\s*\((p\.[^)]+)\)\s*$/
+
+function excerptBlocks(source: SourceCitation): Array<{ excerpt: string; hint?: string }> {
+  const raw = (source.text ?? '').trim()
+  if (!raw) return []
+  const body = raw.replace(/^문헌 발췌:\s*/, '')
+  const parts = body.includes(' | ') ? body.split(' | ') : [body]
+  return parts
+    .map((part) => {
+      const match = part.match(HINT_RE)
+      if (!match || match.index == null) return { excerpt: part.trim() }
+      return { excerpt: part.slice(0, match.index).trim(), hint: match[1].trim() }
+    })
+    .filter((block) => block.excerpt)
+}
+
 export function SourceCitationPanel({
   title = '검색된 출처 (RAG)',
   sources,
   citedIds,
-  defaultOpen = false,
+  defaultOpen = true,
 }: {
   title?: string
   sources?: SourceCitation[] | null
@@ -51,6 +67,8 @@ export function SourceCitationPanel({
         <ul className="space-y-2 border-t border-indigo-100 px-3 py-2">
           {sources.map((src) => {
             const isCited = cited.has(src.id)
+            const grounded = src.tags?.includes('grounded') ?? false
+            const blocks = excerptBlocks(src)
             return (
               <li
                 key={src.id}
@@ -60,15 +78,30 @@ export function SourceCitationPanel({
                     : 'border-indigo-100 bg-white'
                 }`}
               >
-                <p className="font-semibold text-slate-800">
-                  [{src.id}] {src.title}
+                <p className="font-semibold text-indigo-950">
+                  [{src.id}]
+                  {grounded ? (
+                    <span className="ml-2 font-medium text-indigo-800">시스템 프롬프트 발췌</span>
+                  ) : null}
                   {isCited ? (
                     <span className="ml-2 font-medium text-emerald-700">인용됨</span>
                   ) : null}
                 </p>
-                {src.text ? (
-                  <p className="mt-1 leading-relaxed text-slate-600">{src.text}</p>
-                ) : null}
+                {blocks.length > 0 ? (
+                  <div className="mt-1 space-y-2">
+                    {blocks.map((block) => (
+                      <div key={`${src.id}-${block.excerpt.slice(0, 24)}`}>
+                        <p className="text-sm leading-relaxed text-slate-800">{block.excerpt}</p>
+                        {block.hint ? (
+                          <p className="mt-0.5 font-medium text-slate-700">위치 {block.hint}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-slate-500">저장된 발췌 문장이 없습니다.</p>
+                )}
+                <p className="mt-1 text-slate-500">{src.title}</p>
               </li>
             )
           })}

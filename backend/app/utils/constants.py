@@ -83,9 +83,9 @@ RUBRIC_LABELS_KO: dict[str, str] = {
 CONDITION_LABELS_KO: dict[str, str] = {
     CONDITION_BASELINE: "Baseline",
     CONDITION_AI_ETHICS: "AI 윤리",
-    CONDITION_AI_ETHICS_BUDDHIST: "AI 윤리 + 불교철학",
-    "buddhist_ethics_guided": "AI 윤리 + 불교철학",
-    "buddhist_guided": "AI 윤리 + 불교철학",
+    CONDITION_AI_ETHICS_BUDDHIST: "AI 윤리 + 불교 행동",
+    "buddhist_ethics_guided": "AI 윤리 + 불교 행동",
+    "buddhist_guided": "AI 윤리 + 불교 행동",
 }
 
 ETHICAL_RISK_LEVELS = ["low", "moderate", "high", "critical"]

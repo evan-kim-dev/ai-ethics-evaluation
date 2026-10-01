@@ -4,6 +4,7 @@ import { ConditionHeader } from '@/components/experiment/ConditionHeader'
 import { EvaluationReasoningAccordion } from '@/components/experiment/EvaluationReasoningAccordion'
 import { ResponseTextPanel } from '@/components/experiment/ResponseTextPanel'
 import { RubricScoreList } from '@/components/experiment/RubricScoreList'
+import { GroundedPromptClaimsPanel } from '@/components/ethics/GroundedPromptClaimsPanel'
 import { SourceCitationPanel } from '@/components/experiment/SourceCitationPanel'
 import { WarningList } from '@/components/experiment/WarningList'
 import { Button } from '@/components/ui/button'
@@ -46,8 +47,12 @@ export function ConditionResultCard({ result }: { result: ConditionExperimentRes
         </div>
       </div>
 
+      {result.condition === 'ai_ethics_buddhist_guided' ? (
+        <GroundedPromptClaimsPanel compact />
+      ) : null}
+
       <SourceCitationPanel
-        title="응답 생성 시 검색된 출처"
+        title="응답 생성 시 검색된 출처 (RAG)"
         sources={result.response.retrieved_sources}
       />
 

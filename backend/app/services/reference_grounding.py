@@ -28,6 +28,20 @@ REQUIRED_CONCEPTS = (
     "korea_ai_ethics",
 )
 
+CONCEPT_AXES: dict[str, tuple[str, ...]] = {
+    "dependent_origination": ("E1", "E2"),
+    "compassion": ("C1", "C2"),
+    "non_self": ("N1", "N2"),
+    "korea_ai_ethics": ("E1", "E2", "C1", "C2", "N1", "N2"),
+}
+
+CONCEPT_LABELS_KO: dict[str, str] = {
+    "dependent_origination": "연기",
+    "compassion": "자비",
+    "non_self": "무아",
+    "korea_ai_ethics": "윤리원칙 기본 프레임",
+}
+
 CONCEPT_PLACEHOLDERS = {
     "dependent_origination": "{{GROUNDED_DEPENDENT_ORIGINATION}}",
     "compassion": "{{GROUNDED_COMPASSION}}",
@@ -640,6 +654,48 @@ def build_buddhist_guided_prompt(
 
 def claims_to_dicts(claims: list[GroundedClaim]) -> list[dict[str, object]]:
     return [claim.to_dict() for claim in claims]
+
+
+def clip_excerpt(quote: str, limit: int = MAX_QUOTE_WORDS) -> str:
+    tokens = [token for token in normalize_ws(quote).split() if token]
+    if len(tokens) <= limit:
+        return " ".join(tokens)
+    return " ".join(tokens[:limit]) + "…"
+
+
+def load_grounded_prompt_claims(path: Path | None = None) -> list[dict[str, object]]:
+    """시스템 프롬프트에 넣은 발췌만 반환한다. PDF와 Drive 경로는 읽지 않는다."""
+    claims_path = path or DEFAULT_CLAIMS_JSON
+    if not claims_path.exists():
+        raise GroundingError(f"근거 발췌 목록이 없습니다: {claims_path}")
+    raw = json.loads(claims_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, list):
+        raise GroundingError("grounded_claims.json은 배열이어야 합니다.")
+    rows: list[dict[str, object]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        source_id = str(item.get("source_id") or "").strip()
+        concept = str(item.get("concept") or "").strip()
+        if not source_id or not concept:
+            continue
+        year = item.get("year")
+        rows.append(
+            {
+                "source_id": source_id,
+                "concept": concept,
+                "concept_label": CONCEPT_LABELS_KO.get(concept, concept),
+                "axes": list(CONCEPT_AXES.get(concept, ())),
+                "excerpt": clip_excerpt(str(item.get("quote") or "")),
+                "paper_section_hint": str(item.get("paper_section_hint") or "").strip(),
+                "behavior_rule": str(item.get("paraphrase_behavior_rule") or "").strip(),
+                "title": str(item.get("title") or "").strip(),
+                "author": str(item.get("author") or "").strip(),
+                "year": int(year) if isinstance(year, int) else None,
+                "url": str(item.get("url") or "").strip(),
+            }
+        )
+    return rows
 
 
 def write_grounded_prompt(

@@ -36,9 +36,9 @@ export const RUBRIC_OPTIONS: { key: RubricKey; label: string; description: strin
 export const CONDITION_OPTIONS = [
   { value: 'baseline', label: 'Baseline' },
   { value: 'ai_ethics_guided', label: 'AI 윤리' },
-  { value: 'ai_ethics_buddhist_guided', label: 'AI 윤리 + 불교철학' },
-  { value: 'buddhist_ethics_guided', label: 'AI 윤리 + 불교철학 (구버전)' },
-  { value: 'buddhist_guided', label: 'AI 윤리 + 불교철학 (구버전)' },
+  { value: 'ai_ethics_buddhist_guided', label: 'AI 윤리 + 불교 행동' },
+  { value: 'buddhist_ethics_guided', label: 'AI 윤리 + 불교 행동 (구버전)' },
+  { value: 'buddhist_guided', label: 'AI 윤리 + 불교 행동 (구버전)' },
 ] as const
 
 export const DOMAIN_OPTIONS = [
