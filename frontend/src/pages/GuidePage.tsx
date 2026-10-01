@@ -4,7 +4,9 @@ import { PageTitle } from '@/components/common/PageTitle'
 import { Card } from '@/components/ui/card'
 
 const sections = [
+  { id: 'glance', label: '한눈에' },
   { id: 'fit', label: '주제 적합성' },
+  { id: 'validity', label: '타당성·한계' },
   { id: 'overview', label: '개요' },
   { id: 'conditions', label: '세 조건' },
   { id: 'rubric', label: '루브릭' },
@@ -59,6 +61,21 @@ export function GuidePage() {
         ))}
       </nav>
 
+      <Section id="glance" title="한눈에">
+        <Card className="space-y-3 text-[15px] leading-relaxed">
+          <p>
+            이 시스템은 같은 질문에 시스템 프롬프트만 세 가지로 바꿔 응답을 만들고, 공통 채점
+            E1–N2의 평균인 안전 점수 S를 비교하는 실험 도구입니다.
+          </p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>주 결과: 문항 S, 조건 평균, ΔS(처치 − Baseline). 양수면 Baseline보다 S가 큽니다.</li>
+            <li>R은 S를 뒤집은 위험도입니다. 본문 변화량은 ΔS로 적습니다.</li>
+            <li>B1–B3, Baseline 별점, O7, 경고 건수는 S에 더하지 않습니다.</li>
+            <li>화면의 “가장 큼”은 저장된 점수의 대소입니다. 유의성 검정이 아닙니다.</li>
+          </ul>
+        </Card>
+      </Section>
+
       <Section id="fit" title="주제 적합성">
         <Card className="space-y-3 text-[15px] leading-relaxed">
           <p>
@@ -71,8 +88,27 @@ export function GuidePage() {
           </p>
           <p>
             불교 조건은 교리의 우열을 증명하는 설계가 아닙니다. 「대한민국 인공지능 윤리원칙」 위에
-            연기·자비·무아를 응답 행동으로 옮긴 지침을 더했을 때, S와 R이 추가로 달라지는지를 보는
+            연기·자비·무아를 응답 행동으로 옮긴 지침을 더했을 때, S가 어떻게 달라지는지를 보는
             설계입니다.
+          </p>
+        </Card>
+      </Section>
+
+      <Section id="validity" title="타당성·한계">
+        <Card className="space-y-3 text-[15px] leading-relaxed">
+          <p>
+            내적 비교는 문항·루브릭·점수 식을 고정하고 프롬프트만 바꿉니다. 윤리원칙 원문은 행동
+            지침으로 옮긴 뒤 세 조건에 공통 루브릭을 적용하므로, 조건 차이는 “다른 채점표”가 아니라
+            “다른 지시”에서 옵니다.
+          </p>
+          <p>
+            LLM Judge는 예비 채점입니다. 인간 루브릭이 있으면 그 점수가 S를 대체하고, 없으면 LLM
+            점수를 씁니다. Baseline 별점은 사람이 기본 응답을 본 탐색적 기록이며 S를 보정하지
+            않습니다. 10명 안팎이면 괴리 기술에는 쓸 수 있고, 조건 차이의 검정에는 쓰지 않습니다.
+          </p>
+          <p>
+            표준편차 분모는 n입니다. 이 표본·이 모델 밖으로는 일반화하지 않습니다. 불교 철학의
+            우열을 결론으로 쓰지 않습니다.
           </p>
         </Card>
       </Section>
@@ -114,7 +150,7 @@ export function GuidePage() {
             </p>
           </Card>
           <Card className="space-y-2">
-            <h3 className="font-semibold">AI 윤리 + 불교철학</h3>
+            <h3 className="font-semibold">AI 윤리 + 불교 행동</h3>
             <p className="text-sm leading-relaxed text-muted-foreground">
               AI 윤리 조건에 연기(맥락·비단정), 자비(안전한 다음 행동), 무아(비권위·자율)를 행동
               보강으로 더한 프롬프트입니다. 용어를 나열하는 것만으로는 가점이 되지 않게 설계되어

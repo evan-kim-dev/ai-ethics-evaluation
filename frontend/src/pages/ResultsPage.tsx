@@ -3,11 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { fetchResultsPayload, getResultsCsvUrl } from '@/api/dashboard'
 import { ConditionAxisGroupedChart } from '@/components/charts/ConditionAxisGroupedChart'
-import {
-  DomainSafetyComparisonChart,
-  QuestionSafetyStripChart,
-} from '@/components/charts/DomainSafetyComparisonChart'
-import { ThreeConditionScoreBarChart } from '@/components/charts/ThreeConditionScoreBarChart'
+import { QuestionSafetyStripChart } from '@/components/charts/DomainSafetyComparisonChart'
 import { WarningFrequencyChart } from '@/components/charts/WarningFrequencyChart'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorAlert } from '@/components/common/ErrorAlert'
@@ -35,7 +31,6 @@ import {
   countBestConditions,
 } from '@/utils/paperStats'
 import { formatDelta, interpretDelta } from '@/utils/risk'
-import { SimpleBarChart } from '@/components/charts/SimpleBarChart'
 import { PaperFiguresSection } from '@/components/results/PaperFiguresSection'
 
 export function ResultsPage() {
@@ -219,23 +214,6 @@ export function ResultsPage() {
     [analyzedQuestionRows],
   )
 
-  const deltaBarItems = useMemo(() => {
-    const base = baseline?.average_safety_score
-    return (['ai_ethics_guided', 'ai_ethics_buddhist_guided'] as Condition[])
-      .map((condition) => {
-        const avg = conditionMap.get(condition)?.average_safety_score
-        const delta =
-          base != null && avg != null ? Math.round((avg - base) * 100) / 100 : null
-        return {
-          label: CONDITION_META[condition].shortLabel,
-          value: delta ?? 0,
-          color: CONDITION_META[condition].chartColor,
-          missing: delta == null,
-        }
-      })
-      .filter((item) => !item.missing)
-  }, [baseline, conditionMap])
-
   const paperConditionStats = useMemo(
     () => buildConditionPaperStats(analyzedQuestionRows),
     [analyzedQuestionRows],
@@ -252,7 +230,7 @@ export function ResultsPage() {
         <div>
           <PageTitle
             title="전체 분석"
-            description="논문용 그래프·표와 함께 Baseline · AI 윤리 · AI 윤리+불교 실험 결과를 비교합니다."
+            description="문항 S의 평균·표준편차(분모 n)·ΔS입니다. 양수 ΔS는 Baseline보다 안전 점수가 크다는 기술통계입니다."
           />
           <ScoreScaleLegend className="mt-2" />
         </div>
@@ -342,7 +320,7 @@ export function ResultsPage() {
               value={summary?.critical_mismatch_count ?? '-'}
             />
             <KpiCard
-              label="인간 평가 완료율"
+              label="인간 루브릭 비율"
               value={
                 summary?.human_evaluation_rate != null
                   ? `${summary.human_evaluation_rate}%`
@@ -360,26 +338,11 @@ export function ResultsPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-1 text-lg font-semibold">조건별 평균 윤리 대응 점수 S</h2>
-              <p className="mb-3 text-xs text-muted-foreground">1~5 · 높을수록 좋음</p>
-              <ThreeConditionScoreBarChart
-                items={CONDITIONS.map((condition) => ({
-                  condition,
-                  score: conditionMap.get(condition)?.average_safety_score ?? null,
-                }))}
-              />
-            </Card>
-            <Card>
               <h2 className="mb-1 text-lg font-semibold">축 점수 비교 (E / C / N / O7)</h2>
-              <p className="mb-3 text-xs text-muted-foreground">조건별 평균 축 점수</p>
-              <ConditionAxisGroupedChart values={axisChartValues} />
-            </Card>
-            <Card>
-              <h2 className="mb-1 text-lg font-semibold">도메인별 평균 S</h2>
               <p className="mb-3 text-xs text-muted-foreground">
-                현재 필터의 분석된 질문 기준
+                논문용 그림에 없는 축 분해입니다. O7은 S에 포함되지 않습니다.
               </p>
-              <DomainSafetyComparisonChart rows={domainSafetyRows} />
+              <ConditionAxisGroupedChart values={axisChartValues} />
             </Card>
             <Card>
               <h2 className="mb-1 text-lg font-semibold">질문별 S 분포</h2>
@@ -387,64 +350,6 @@ export function ResultsPage() {
                 점 = 조건별 점수 위치 (왼쪽 1 · 오른쪽 5)
               </p>
               <QuestionSafetyStripChart rows={questionStripRows} />
-            </Card>
-            <Card>
-              <h2 className="mb-1 text-lg font-semibold">질문별 최고 점수 조건</h2>
-              <p className="mb-3 text-xs text-muted-foreground">S가 가장 높았던 횟수</p>
-              <SimpleBarChart
-                maxValue={Math.max(1, ...CONDITIONS.map((c) => bestWins[c]))}
-                items={CONDITIONS.map((condition) => ({
-                  label: CONDITION_META[condition].shortLabel,
-                  value: bestWins[condition],
-                  color: CONDITION_META[condition].chartColor,
-                }))}
-              />
-            </Card>
-            <Card>
-              <h2 className="mb-1 text-lg font-semibold">Baseline 대비 ΔS</h2>
-              <p className="mb-3 text-xs text-muted-foreground">양수면 Baseline보다 향상</p>
-              {deltaBarItems.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  비교할 조건 평균이 아직 없습니다.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {deltaBarItems.map((item) => {
-                    const width = Math.min(100, Math.abs(item.value) * 40)
-                    return (
-                      <div key={item.label}>
-                        <div className="mb-1 flex justify-between text-sm">
-                          <span>{item.label}</span>
-                          <span
-                            className={
-                              item.value > 0
-                                ? 'font-medium text-green-700'
-                                : item.value < 0
-                                  ? 'font-medium text-red-700'
-                                  : 'font-medium text-slate-600'
-                            }
-                          >
-                            {item.value > 0 ? '+' : ''}
-                            {item.value.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="relative h-3 overflow-hidden rounded-full bg-slate-100">
-                          <div className="absolute inset-y-0 left-1/2 w-px bg-slate-300" />
-                          <div
-                            className="absolute top-0 h-full rounded-full"
-                            style={{
-                              width: `${width}%`,
-                              left: item.value >= 0 ? '50%' : `calc(50% - ${width}%)`,
-                              backgroundColor: item.color,
-                              opacity: 0.85,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
             </Card>
             <Card className="lg:col-span-2">
               <h2 className="mb-1 text-lg font-semibold">경고 빈도</h2>

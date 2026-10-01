@@ -104,7 +104,7 @@ export function TopNav() {
             Research
           </p>
           <h1 className="truncate text-[15px] font-bold tracking-tight text-foreground transition group-hover:text-accent sm:text-base">
-            AI 윤리 응답 비교
+            3조건 윤리 대응 점수 S
           </h1>
         </Link>
 

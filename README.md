@@ -1,8 +1,9 @@
-# AI Ethics Evaluation 🔬 — 루브릭 기반 생성형 AI 윤리 위험도 평가 MVP
+# AI Ethics Evaluation — 3조건 프롬프트의 윤리 대응 점수(S) 비교
 
-> **무엇을**: 동일 질문에 대해 **3조건 시스템 프롬프트**로 응답을 생성하고,  
-> E1–N2 루브릭·S/R 점수로 **윤리적 위험도를 비교**하는 연구용 웹 MVP  
-> **누구를 위해**: 졸업논문·실험 설계를 검증하려는 연구자, Human-in-the-Loop로 평가를 보완하려는 팀
+> **한눈에**: 같은 질문에 시스템 프롬프트 3종을 적용하고, 공통 루브릭 **S**로 차이를 기술한다.  
+> **주 지표**: S = (E1+E2+C1+C2+N1+N2)/6, ΔS = 처치 − Baseline.  
+> **아닌 것**: 불교 교리의 우열 검정, 별점의 S 합산, 유의성 없는 “개선 입증”.  
+> **읽기**: [`docs/research-brief.md`](docs/research-brief.md) · 화면 `/guide`
 
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.x-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
@@ -11,13 +12,10 @@
 ![LLM](https://img.shields.io/badge/LLM-Gemini%20%2F%20OpenAI%20compatible-8A2BE2)
 ![License](https://img.shields.io/badge/License-Research%20MVP-lightgrey)
 
-**논문 주제**  
-*불교 윤리 기반 시스템 프롬프트가 생성형 AI 응답의 윤리적 위험도에 미치는 영향:  
-루브릭 기반 평가 프레임워크 및 Human-in-the-Loop 프로토타입*
-
-이 프로젝트는 불교 철학의 우월을 주장하지 않습니다.  
-**AI 윤리 원칙에 연기·자비·무아를 ‘행동 지침’으로 추가했을 때**,  
-응답의 안전성·책임성·자율성이 **추가로** 개선되는지 실험적으로 확인하는 것이 목적입니다.
+**논문에서 다루는 조작**  
+윤리원칙 프롬프트에 연기·자비·무아를 **응답 행동 지침**으로 더했을 때,  
+공통 루브릭 S가 Baseline·윤리 단독과 어떻게 다른지 기술한다.  
+사람 별점은 Baseline에 대한 탐색적 HITL이며 S를 고치지 않는다.
 
 ---
 
@@ -43,8 +41,10 @@
 
 ### 연구 질문
 > 「대한민국 인공지능 윤리원칙」에  
-> 불교 윤리에서 도출한 **연기·자비·무아 행동 지침**을 추가하면,  
-> 공통 루브릭 기준 윤리 위험도(S/R)가 **추가로** 개선되는가?
+> 연기·자비·무아 **행동 지침**을 추가하면,  
+> 공통 루브릭 안전 점수 S가 Baseline 및 윤리 단독 조건과 어떻게 다른가?
+
+유의확률을 계산하지 않은 화면 수치는 기술통계다. 본문의 변화량은 ΔS로 적는다.
 
 ### 제공 가치
 
@@ -320,6 +320,7 @@ ai-ethics-evaluation/
 
 | 문서 | 내용 |
 |---|---|
+| [`docs/research-brief.md`](docs/research-brief.md) | 한눈에 보는 연구 질문·지표 위계·한계 |
 | [`docs/experiment-design.md`](docs/experiment-design.md) | 3조건 실험 설계 |
 | [`docs/rubric.md`](docs/rubric.md) | 루브릭 · S/R 공식 |
 | [`docs/korea-ai-ethics-evaluation-values.md`](docs/korea-ai-ethics-evaluation-values.md) | 국가 AI 윤리원칙 → 평가가치 매핑 |

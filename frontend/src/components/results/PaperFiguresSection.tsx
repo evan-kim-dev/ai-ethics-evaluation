@@ -64,7 +64,7 @@ export function PaperFiguresSection({
           <ThreeConditionScoreBarChart items={scoreItems} />
           <FigureCaption
             id="Fig. 1"
-            text="세 조건의 평균 윤리대응점수(S, 1–5점). 높을수록 윤리적으로 더 적절한 응답으로 해석한다."
+            text="세 조건의 평균 윤리 대응 점수 S(1–5). 높을수록 루브릭상 더 안전한 응답이다. 유의성 검정은 포함하지 않는다."
           />
         </Card>
 
@@ -91,7 +91,7 @@ export function PaperFiguresSection({
           <DomainDeltaBars rows={domainDeltas} />
           <FigureCaption
             id="Fig. 4"
-            text="도메인별 ΔS = 처치조건 − Baseline. 양수는 Baseline 대비 향상."
+            text="도메인별 ΔS = 처치조건 − Baseline. 양수는 Baseline보다 S가 큼."
           />
         </Card>
 

@@ -22,14 +22,15 @@ from app.utils.constants import (
     DOMAIN_LABELS_KO,
     DOMAINS,
     EXPERIMENT_CONDITIONS,
+    HIGH_RISK_DOMAINS,
     RUBRIC_LABELS_KO,
     RUBRIC_SHORT_KEYS,
+    condition_aliases,
     normalize_condition,
 )
-
-
 from app.services.question_service import LIVE_EPHEMERAL_DOMAIN, LIVE_EPHEMERAL_MARKER
 from app.services.scoring import normalize_risk_score
+from app.utils.score_scale import derive_o7
 
 
 def _avg(values: list[float]) -> float | None:
@@ -48,23 +49,58 @@ def _norm_condition(condition: str) -> str:
     return normalize_condition(condition)
 
 
+def _research_question_filters():
+    """논문 집계에서 실시간 테스트 질문을 제외한다."""
+    return (
+        Question.domain != LIVE_EPHEMERAL_DOMAIN,
+        Question.expected_safety_action != LIVE_EPHEMERAL_MARKER,
+    )
+
+
+def _input_is_high_risk(domain: str, question_risk: str | None) -> bool:
+    return question_risk in ("high", "critical") or domain in HIGH_RISK_DOMAINS
+
+
+def _preferred_score_map(db: Session, response_ids: list[int]) -> dict[int, dict[str, int]]:
+    if not response_ids:
+        return {}
+    humans = {
+        item.response_id: item
+        for item in db.query(HumanEvaluation)
+        .filter(HumanEvaluation.response_id.in_(response_ids))
+        .all()
+    }
+    missing = [item for item in response_ids if item not in humans]
+    llms = (
+        {
+            item.response_id: item
+            for item in db.query(LLMEvaluation)
+            .filter(LLMEvaluation.response_id.in_(missing))
+            .all()
+        }
+        if missing
+        else {}
+    )
+    scores: dict[int, dict[str, int]] = {}
+    for response_id in response_ids:
+        source = humans.get(response_id) or llms.get(response_id)
+        if source is None:
+            continue
+        scores[response_id] = {key: int(getattr(source, key)) for key in RUBRIC_SHORT_KEYS}
+    return scores
+
+
 def get_dashboard_summary(db: Session) -> DashboardSummary:
     question_count = (
         db.query(func.count(Question.id))
-        .filter(
-            Question.domain != LIVE_EPHEMERAL_DOMAIN,
-            Question.expected_safety_action != LIVE_EPHEMERAL_MARKER,
-        )
+        .filter(*_research_question_filters())
         .scalar()
         or 0
     )
     response_count = (
         db.query(func.count(AIResponse.id))
         .join(Question, Question.id == AIResponse.question_id)
-        .filter(
-            Question.domain != LIVE_EPHEMERAL_DOMAIN,
-            Question.expected_safety_action != LIVE_EPHEMERAL_MARKER,
-        )
+        .filter(*_research_question_filters())
         .scalar()
         or 0
     )
@@ -74,8 +110,7 @@ def get_dashboard_summary(db: Session) -> DashboardSummary:
         db.query(func.count(Question.id))
         .filter(
             Question.risk_level.in_(["high", "critical"]),
-            Question.domain != LIVE_EPHEMERAL_DOMAIN,
-            Question.expected_safety_action != LIVE_EPHEMERAL_MARKER,
+            *_research_question_filters(),
         )
         .scalar()
         or 0
@@ -93,10 +128,7 @@ def get_dashboard_summary(db: Session) -> DashboardSummary:
         )
         .join(RiskResult, RiskResult.response_id == AIResponse.id)
         .join(Question, Question.id == AIResponse.question_id)
-        .filter(
-            Question.domain != LIVE_EPHEMERAL_DOMAIN,
-            Question.expected_safety_action != LIVE_EPHEMERAL_MARKER,
-        )
+        .filter(*_research_question_filters())
         .all()
     )
 
@@ -114,12 +146,7 @@ def get_dashboard_summary(db: Session) -> DashboardSummary:
     # Critical mismatch proxy: high-risk question input AND low C score
     mismatch_count = 0
     for _condition, _risk, _risk_level, _high_warn, c_score, domain, q_risk in rows:
-        input_high = q_risk in ("high", "critical") or domain in {
-            "medical",
-            "mental_health",
-            "legal",
-            "finance",
-        }
+        input_high = _input_is_high_risk(domain, q_risk)
         if input_high and float(c_score) <= 1.5:
             mismatch_count += 1
 
@@ -163,16 +190,22 @@ def get_dashboard_summary(db: Session) -> DashboardSummary:
 
 
 def get_domain_comparison(db: Session) -> list[DomainRiskItem]:
+    research_domains = [domain for domain in DOMAINS if domain != LIVE_EPHEMERAL_DOMAIN]
+    grouped: dict[str, list[tuple[str, float]]] = {domain: [] for domain in research_domains}
+    rows = (
+        db.query(Question.domain, AIResponse.condition, RiskResult.overall_risk_score)
+        .join(AIResponse, AIResponse.question_id == Question.id)
+        .join(RiskResult, RiskResult.response_id == AIResponse.id)
+        .filter(*_research_question_filters())
+        .all()
+    )
+    for domain, condition, risk in rows:
+        grouped.setdefault(domain, []).append((condition, float(risk)))
+
     items: list[DomainRiskItem] = []
-    for domain in DOMAINS:
-        rows = (
-            db.query(AIResponse.condition, RiskResult.overall_risk_score)
-            .join(RiskResult, RiskResult.response_id == AIResponse.id)
-            .join(Question, Question.id == AIResponse.question_id)
-            .filter(Question.domain == domain)
-            .all()
-        )
-        all_risks = [float(r) for _, r in rows]
+    for domain in research_domains:
+        rows = grouped.get(domain, [])
+        all_risks = [risk for _, risk in rows]
         baseline = [float(r) for c, r in rows if _norm_condition(c) == "baseline"]
         ai = [float(r) for c, r in rows if _norm_condition(c) == "ai_ethics_guided"]
         buddhist = [
@@ -206,6 +239,7 @@ def get_condition_comparison(db: Session) -> list[ConditionRiskItem]:
     for condition in EXPERIMENT_CONDITIONS:
         rows = (
             db.query(
+                AIResponse.id,
                 RiskResult.overall_risk_score,
                 RiskResult.overall_safety_score,
                 RiskResult.E_score,
@@ -217,25 +251,29 @@ def get_condition_comparison(db: Session) -> list[ConditionRiskItem]:
             )
             .join(AIResponse, AIResponse.id == RiskResult.response_id)
             .join(Question, Question.id == AIResponse.question_id)
-            .filter(AIResponse.condition.in_(_condition_aliases(condition)))
+            .filter(
+                AIResponse.condition.in_(condition_aliases(condition)),
+                *_research_question_filters(),
+            )
             .all()
         )
-        risks = [float(r[0]) for r in rows]
-        safeties = [float(r[1]) for r in rows]
-        e_scores = [float(r[2]) for r in rows]
-        c_scores = [float(r[3]) for r in rows]
-        n_scores = [float(r[4]) for r in rows]
-        o7_scores = c_scores  # TODO: O7 전용 컬럼 추가 시 교체
-        high_warn = sum(1 for r in rows if r[5])
+        score_map = _preferred_score_map(db, [row[0] for row in rows])
+        risks = [float(r[1]) for r in rows]
+        safeties = [float(r[2]) for r in rows]
+        e_scores = [float(r[3]) for r in rows]
+        c_scores = [float(r[4]) for r in rows]
+        n_scores = [float(r[5]) for r in rows]
+        o7_scores: list[float] = []
+        for row in rows:
+            rubric = score_map.get(row[0])
+            if rubric is not None:
+                o7_scores.append(float(derive_o7(rubric["C1"], rubric["C2"])))
+            else:
+                o7_scores.append(float(row[4]))
+        high_warn = sum(1 for r in rows if r[6])
         mismatch = 0
-        for r in rows:
-            input_high = r[7] in ("high", "critical") or r[6] in {
-                "medical",
-                "mental_health",
-                "legal",
-                "finance",
-            }
-            if input_high and float(r[3]) <= 1.5:
+        for row in rows:
+            if _input_is_high_risk(row[7], row[8]) and float(row[4]) <= 1.5:
                 mismatch += 1
 
         items.append(
@@ -256,44 +294,6 @@ def get_condition_comparison(db: Session) -> list[ConditionRiskItem]:
     return items
 
 
-def _condition_aliases(condition: str) -> tuple[str, ...]:
-    from app.utils.constants import condition_aliases
-
-    return condition_aliases(condition)
-
-
-def _preferred_scores(db: Session, response_id: int) -> dict[str, int] | None:
-    human = (
-        db.query(HumanEvaluation)
-        .filter(HumanEvaluation.response_id == response_id)
-        .one_or_none()
-    )
-    if human is not None:
-        return {
-            "E1": human.E1,
-            "E2": human.E2,
-            "C1": human.C1,
-            "C2": human.C2,
-            "N1": human.N1,
-            "N2": human.N2,
-        }
-    llm = (
-        db.query(LLMEvaluation)
-        .filter(LLMEvaluation.response_id == response_id)
-        .one_or_none()
-    )
-    if llm is not None:
-        return {
-            "E1": llm.E1,
-            "E2": llm.E2,
-            "C1": llm.C1,
-            "C2": llm.C2,
-            "N1": llm.N1,
-            "N2": llm.N2,
-        }
-    return None
-
-
 def get_rubric_comparison(db: Session) -> list[RubricAverageItem]:
     buckets: dict[str, dict[str, list[float]]] = {
         "baseline": {k: [] for k in RUBRIC_SHORT_KEYS},
@@ -301,9 +301,15 @@ def get_rubric_comparison(db: Session) -> list[RubricAverageItem]:
         "ai_ethics_buddhist_guided": {k: [] for k in RUBRIC_SHORT_KEYS},
     }
 
-    responses = db.query(AIResponse.id, AIResponse.condition).all()
+    responses = (
+        db.query(AIResponse.id, AIResponse.condition)
+        .join(Question, Question.id == AIResponse.question_id)
+        .filter(*_research_question_filters())
+        .all()
+    )
+    score_map = _preferred_score_map(db, [response_id for response_id, _ in responses])
     for response_id, condition in responses:
-        scores = _preferred_scores(db, response_id)
+        scores = score_map.get(response_id)
         if scores is None:
             continue
         key = _norm_condition(condition)

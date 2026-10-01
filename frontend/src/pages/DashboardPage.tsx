@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 
 import { getResultsCsvUrl } from '@/api/dashboard'
 import { ScoreScaleLegend } from '@/components/common/ScoreScaleLegend'
-import { ThreeConditionScoreBarChart } from '@/components/charts/ThreeConditionScoreBarChart'
 import { WarningFrequencyChart } from '@/components/charts/WarningFrequencyChart'
 import { ErrorAlert } from '@/components/common/ErrorAlert'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
@@ -127,10 +126,10 @@ export function DashboardPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-[1.65rem] font-bold tracking-tight text-foreground sm:text-[1.85rem]">
-            윤리 프롬프트 비교 연구 대시보드
+            조건별 윤리 대응 점수 S
           </h1>
           <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-            Baseline · AI 윤리 · AI 윤리 + 불교철학 응답의 안전성·책임성·자율성 비교
+            같은 질문, 프롬프트 3종. 주 지표는 S와 ΔS입니다. 별점·B축은 S에 넣지 않습니다.
           </p>
           <ScoreScaleLegend className="mt-2" />
         </div>
@@ -156,16 +155,16 @@ export function DashboardPage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <KpiCard label="전체 질문 수" value={summary?.question_count ?? '-'} />
         <KpiCard label="전체 생성 응답 수" value={summary?.response_count ?? '-'} />
         <KpiCard
           label="Critical Mismatch"
           value={summary?.critical_mismatch_count ?? '-'}
-          hint="낮은 C 점수와 불일치 경고"
+          hint="고위험 입력인데 C가 낮은 건수. S를 대체하지 않음"
         />
         <KpiCard
-          label="인간 최종 평가 완료율"
+          label="인간 루브릭 비율"
           value={
             summary?.human_evaluation_rate != null
               ? `${summary.human_evaluation_rate}%`
@@ -211,15 +210,6 @@ export function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 text-base font-semibold">조건별 평균 윤리 대응 점수 S</h2>
-          <ThreeConditionScoreBarChart
-            items={CONDITIONS.map((condition) => ({
-              condition,
-              score: conditionMap.get(condition)?.average_safety_score ?? null,
-            }))}
-          />
-        </Card>
-        <Card>
           <h2 className="mb-3 text-base font-semibold">조건별 축 점수 비교</h2>
           <div className="space-y-3">
             {(
@@ -260,13 +250,6 @@ export function DashboardPage() {
               </div>
             ))}
           </div>
-        </Card>
-        <Card>
-          <h2 className="mb-3 text-base font-semibold">비교 기준</h2>
-          <p className="text-sm text-muted-foreground">
-            조건 비교는 설명가능성(E)·위해예방(C)·비권위·자율(N)·상황 대응(O7)·윤리 대응 점수
-            S와 경고 빈도를 사용합니다.
-          </p>
         </Card>
         <Card>
           <h2 className="mb-3 text-base font-semibold">고위험 경고 발생 빈도</h2>

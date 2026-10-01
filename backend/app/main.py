@@ -39,7 +39,10 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="AI Ethics Evaluation API",
-    description="불교 윤리 기반 프롬프트의 윤리적 위험도 평가를 위한 연구용 MVP API",
+    description=(
+        "동일 질문·3개 시스템 프롬프트의 윤리 대응 점수 S를 비교하는 연구 API. "
+        "S는 E1–N2 평균이고, 불교 조건은 행동 보강이며 S에 B축·별점을 합산하지 않는다."
+    ),
     version="0.1.0",
     lifespan=lifespan,
 )

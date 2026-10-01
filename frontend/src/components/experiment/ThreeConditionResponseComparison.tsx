@@ -17,8 +17,8 @@ export function ThreeConditionResponseComparison({
   onGoCommentary: () => void
 }) {
   return (
-    <div className="-mx-1 overflow-x-auto pb-1">
-      <div className="grid min-w-[960px] grid-cols-3 gap-4">
+    <div>
+      <div className="grid gap-4 lg:grid-cols-3">
         {results.map((result) => {
           const meta = CONDITION_META[result.condition]
           const risk = result.risk_result

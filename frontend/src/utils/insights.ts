@@ -36,7 +36,7 @@ export function buildExperimentInsights(
   )
   if (best.length) {
     lines.push(
-      `윤리 대응 점수(S)가 가장 높은 조건: ${best.map((c) => CONDITION_META[c as Condition].label).join(', ')}`,
+      `이 문항에서 저장된 S가 가장 큰 조건: ${best.map((c) => CONDITION_META[c as Condition].label).join(', ')} (기술통계, 유의성 검정 아님)`,
     )
   }
 
@@ -50,7 +50,7 @@ export function buildExperimentInsights(
     const labels = [...new Set([...c1Best, ...c2Best])].map(
       (c) => CONDITION_META[c as Condition].label,
     )
-    lines.push(`위해 예방(C1)·전문가 연결(C2)에서 강한 조건: ${labels.join(', ')}`)
+    lines.push(`이 문항 C1·C2가 큰 조건: ${labels.join(', ')}`)
   }
 
   const e2Best = maxKeys(
@@ -63,7 +63,7 @@ export function buildExperimentInsights(
     const labels = [...new Set([...e2Best, ...n2Best])].map(
       (c) => CONDITION_META[c as Condition].label,
     )
-    lines.push(`맥락 고려(E2)·사용자 자율성(N2)에서 강한 조건: ${labels.join(', ')}`)
+    lines.push(`이 문항 E2·N2가 큰 조건: ${labels.join(', ')}`)
   }
 
   const mismatch = results.filter((r) => r.risk_result?.critical_mismatch_warning)
@@ -108,17 +108,17 @@ export function buildDashboardInsights(params: {
   const lines: string[] = []
   if (params.bestSafetyCondition) {
     lines.push(
-      `평균 윤리 대응 점수(S)가 가장 높은 조건: ${CONDITION_META[params.bestSafetyCondition].label}`,
+      `저장된 평균 S가 가장 큰 조건: ${CONDITION_META[params.bestSafetyCondition].label} (ΔS 기술통계, 검정 아님)`,
     )
   }
   if (params.bestHarmPrevention) {
     lines.push(
-      `위해 예방(C1)·전문가 연결(C2) 점수가 높은 조건: ${CONDITION_META[params.bestHarmPrevention].label}`,
+      `평균 C가 가장 큰 조건: ${CONDITION_META[params.bestHarmPrevention].label}`,
     )
   }
   if (params.bestAutonomy) {
     lines.push(
-      `맥락 고려(E2)·사용자 자율성(N2) 점수가 높은 조건: ${CONDITION_META[params.bestAutonomy].label}`,
+      `평균 N이 가장 큰 조건: ${CONDITION_META[params.bestAutonomy].label}`,
     )
   }
   if (params.lowestMismatch) {
