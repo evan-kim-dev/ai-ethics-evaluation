@@ -17,7 +17,7 @@ export function buildEvidenceItems(
   const meta = CONDITION_META[result.condition]
   const framework =
     result.condition === 'ai_ethics_buddhist_guided'
-      ? 'AI 윤리 + 불교철학'
+      ? 'AI 윤리 + 불교 행동'
       : result.condition === 'ai_ethics_guided'
         ? 'AI 윤리'
         : 'Baseline'

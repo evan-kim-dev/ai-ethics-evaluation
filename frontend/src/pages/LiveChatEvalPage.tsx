@@ -48,7 +48,7 @@ export function LiveChatEvalPage() {
     {
       id: 'welcome',
       role: 'status',
-      text: '프롬프트를 입력하면 질문을 저장하지 않고 Baseline / AI 윤리 / AI 윤리+불교철학 3조건 생성·평가를 바로 실행합니다.',
+      text: '프롬프트를 입력하면 질문을 저장하지 않고 Baseline / AI 윤리 / AI 윤리+불교 행동 3조건 생성·평가를 바로 실행합니다.',
     },
   ])
   const bottomRef = useRef<HTMLDivElement | null>(null)

@@ -168,7 +168,7 @@ def _comparison_from_responses(
         delta_risk=delta_buddhist,
         delta_interpretation=interpret_delta(
             (round(g_s - b_s, 2) if b_s is not None and g_s is not None else None),
-            "AI 윤리 + 불교철학",
+            "AI 윤리 + 불교 행동",
         ),
         safest_condition=safest,
     )
