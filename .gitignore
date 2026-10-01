@@ -15,6 +15,10 @@ dist/
 frontend/.env
 *.local
 
+# Local literature drops (Drive folder 김기훈_논문_AI윤리). Do not commit copyrighted PDFs.
+backend/app/references/drive/*
+!backend/app/references/drive/.gitkeep
+
 # OS / IDE
 .DS_Store
 Thumbs.db

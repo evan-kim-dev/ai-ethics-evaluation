@@ -1,0 +1,45 @@
+{
+  "sources": [
+    {
+      "id": "BUD-Fixture-2000",
+      "author": "Fixture Author",
+      "year": 2000,
+      "title": "Fixture paper on conditions",
+      "url": "https://example.invalid/fixture-dependent",
+      "text_path": "dependent.txt",
+      "license": "test fixture",
+      "oa": true,
+      "concepts": ["dependent_origination"]
+    },
+    {
+      "id": "BUD-Fixture-Care-2010",
+      "author": "Fixture Care",
+      "year": 2010,
+      "title": "Fixture paper on harm reduction",
+      "text_path": "compassion.txt",
+      "license": "test fixture",
+      "oa": true,
+      "concepts": ["compassion"]
+    },
+    {
+      "id": "BUD-Fixture-Anatta-1999",
+      "author": "Fixture Anatta",
+      "year": 1999,
+      "title": "Fixture paper on non-self",
+      "text_path": "non_self.txt",
+      "license": "test fixture",
+      "oa": true,
+      "concepts": ["non_self"]
+    },
+    {
+      "id": "KR-ETHICS-FIXTURE",
+      "author": "관계부처 합동",
+      "year": 2026,
+      "title": "대한민국 인공지능 윤리원칙 fixture",
+      "text_path": "korea_ethics.txt",
+      "license": "test fixture",
+      "oa": true,
+      "concepts": ["korea_ai_ethics"]
+    }
+  ]
+}

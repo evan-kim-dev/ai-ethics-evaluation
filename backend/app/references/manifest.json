@@ -1,0 +1,42 @@
+{
+  "drive_sync": {
+    "folder_name": "김기훈_논문_AI윤리",
+    "local_dir": "drive/",
+    "note": "Drive 원본 PDF는 커밋하지 않습니다. OA·공식 문헌만 pdfs/ 또는 text_path로 재현 가능하게 둡니다. Sci-Hub 등 불법 사본은 사용하지 않습니다."
+  },
+  "sources": [
+    {
+      "id": "BUD-Laukkonen-2025",
+      "author": "Ruben E. Laukkonen et al.",
+      "year": 2025,
+      "title": "Contemplative Artificial Intelligence",
+      "url": "https://arxiv.org/abs/2504.15125",
+      "pdf_path": "pdfs/laukkonen-2025-contemplative-ai.pdf",
+      "license": "CC BY 4.0",
+      "oa": true,
+      "concepts": ["dependent_origination", "compassion", "non_self"]
+    },
+    {
+      "id": "BUD-Bombaerts-2024",
+      "author": "Gunter Bombaerts, Tom Hannes, et al.",
+      "year": 2024,
+      "title": "From an attention economy to an ecology of attending. A manifesto.",
+      "url": "https://arxiv.org/abs/2410.17421",
+      "pdf_path": "pdfs/bombaerts-hannes-2024-ecology-of-attending.pdf",
+      "license": "CC BY 4.0",
+      "oa": true,
+      "concepts": ["dependent_origination", "compassion", "non_self"]
+    },
+    {
+      "id": "KR-ETHICS-2026",
+      "author": "관계부처 합동",
+      "year": 2026,
+      "title": "대한민국 인공지능 윤리원칙",
+      "url": "https://www.korea.kr/briefing/pressReleaseView.do?newsId=156775263",
+      "text_path": "../../../docs/korea-ai-ethics-principles-extracted.txt",
+      "license": "대한민국 정부 공개 원칙 원문 추출본",
+      "oa": true,
+      "concepts": ["korea_ai_ethics"]
+    }
+  ]
+}

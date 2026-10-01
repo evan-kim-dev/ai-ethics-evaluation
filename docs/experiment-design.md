@@ -15,3 +15,4 @@ AI 윤리 조건의 평가가치 정의는 `docs/korea-ai-ethics-evaluation-valu
 참고:
 - `buddhist_ethics_guided`는 DB/API 호환을 위해 기존 키를 유지하며, 의미는 “불교 단독”이 아니라 “윤리+불교 결합”입니다.
 - 구버전 키 `buddhist_guided`는 동일 조건으로 정규화합니다.
+- 불교 보강 문단은 `backend/app/references/manifest.json`의 OA·공식 텍스트에서 추출한 발췌로 채웁니다. 재생성: `cd backend && python -m app.scripts.build_grounded_prompt`. 절차는 `backend/app/references/README.md`.
